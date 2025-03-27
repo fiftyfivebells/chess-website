@@ -1,6 +1,5 @@
 package com.ffb.chess
 
-// Server.scala
 import org.http4s.HttpRoutes
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.implicits._

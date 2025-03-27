@@ -1,6 +1,5 @@
 package com.ffb.chess
 
-// Main.scala
 import cats.effect.{ExitCode, IO, IOApp}
 
 object Main extends IOApp {
