@@ -14,7 +14,7 @@ object BestMove {
 
 object ChessService {
   def bestMove(): IO[BestMove] = {
-    ChessEngineClient.create("./nsdb-go-edition").use { engine =>
+    ChessEngineClient.create("./engines/nsdb-go-edition").use { engine =>
       for {
         _ <- engine.runCommand("ucinewgame")
         _ <- engine.runCommand("position startpos")
