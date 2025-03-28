@@ -1,18 +1,11 @@
 package com.ffb.chess
 
 import cats.effect.{IO, Resource}
-// import cats.implicits._
-// import scala.concurrent.duration._
-
-//import cats.effect.std.Queue
-//import cats.effect.kernel.Fiber
 import java.io.{BufferedReader, InputStreamReader}
-//import scala.io.Source
 
 case class ChessEngineClient(
     val process: os.SubProcess,
     val reader: BufferedReader
-//    val outputQueue: Queue[IO, Option[String]]
 ) {
   def runCommand(cmd: String): IO[String] = IO.blocking {
     val _ = IO.blocking(new java.io.File(".").getCanonicalPath).debug()
@@ -37,9 +30,6 @@ case class ChessEngineClient(
 object ChessEngineClient {
   def create(engineName: String): Resource[IO, ChessEngineClient] =
     for {
-      // outputQueue <- Resource.eval(
-      //   Queue.bounded[IO, Option[String]](100)
-      // )
       process <- Resource.make(
         IO.blocking {
           os.proc(engineName).spawn()
