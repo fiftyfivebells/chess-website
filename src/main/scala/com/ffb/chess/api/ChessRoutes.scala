@@ -8,6 +8,8 @@ import cats.effect.IO
 
 import com.ffb.chess.domain.Move
 import com.ffb.chess.service.ChessService
+import org.http4s.EntityDecoder
+import com.ffb.chess.api.MoveRequest
 
 object ChessRoutes extends Http4sDsl[IO] {
   implicit val moveEncoder: EntityEncoder[IO, Move] =
@@ -16,11 +18,23 @@ object ChessRoutes extends Http4sDsl[IO] {
   implicit val moveSeqEncoder: EntityEncoder[IO, Seq[Move]] =
     jsonEncoderOf[IO, Seq[Move]]
 
+  implicit val moveRequestDecoder: EntityDecoder[IO, MoveRequest] =
+    jsonOf[IO, MoveRequest]
+
   def routes(): HttpRoutes[IO] =
     HttpRoutes.of[IO] {
-      case GET -> Root / "bestmove" =>
-        ChessService.bestMove(None).flatMap(Ok(_))
-      case GET -> Root / "allmoves" =>
-        ChessService.allMoves(None).flatMap(Ok(_))
+      case req @ POST -> Root / "bestmove" =>
+        for {
+          moveReq <- req.as[MoveRequest]
+          bestMove <- ChessService.bestMove(moveReq.position, moveReq.engine)
+          response <- Ok(bestMove)
+        } yield response
+
+      case req @ POST -> Root / "allmoves" =>
+        for {
+          moveReq <- req.as[MoveRequest]
+          allMoves <- ChessService.allMoves(moveReq.position, moveReq.engine)
+          response <- Ok(allMoves)
+        } yield response
     }
 }
