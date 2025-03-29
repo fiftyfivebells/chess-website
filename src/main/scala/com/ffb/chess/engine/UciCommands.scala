@@ -12,10 +12,11 @@ final case object UciNewGame extends UciCommand {
   override val command: String = "ucinewgame"
 }
 
-final case class Position(fen: Option[String]) extends UciCommand {
+final case class Position(fen: Option[String], moves: String)
+    extends UciCommand {
   override val command: String = fen match {
-    case Some(f) => s"position fen $f"
-    case None    => "position startpos"
+    case Some(f) => s"position fen $f $moves"
+    case None    => s"position startpos $moves"
   }
 }
 

@@ -34,38 +34,38 @@ case class ChessEngineClient(
     output.mkString("\n").trim
   }
 
-  private def initializeEngine(fen: Option[String]): IO[Unit] =
+  private def initializeEngine(
+      fen: Option[String],
+      moves: Option[Seq[Move]]
+  ): IO[Unit] =
     for {
       _ <- runCommand(Uci)
       _ <- runCommand(UciNewGame)
-      _ <- runCommand(Position(fen))
+      moveInput = moves match {
+        case None    => ""
+        case Some(m) => transformMovesInput(m)
+      }
+      _ <- runCommand(Position(fen, moveInput))
     } yield ()
 
-  def bestMove(fen: Option[String]): IO[Move] =
+  def bestMove(fen: Option[String], moves: Option[Seq[Move]]): IO[Move] =
     for {
-      _ <- initializeEngine(fen)
-      output <- runCommand(Go())
+      _ <- initializeEngine(fen, moves)
+      output <- runCommand(Go(), "bestmove")
       move = output.dropWhile(_ != ' ').trim
     } yield Move.fromString(move)
 
-  def allMoves(fen: Option[String]): IO[Seq[Move]] =
-    for {
-      _ <- initializeEngine(fen)
-      output <- runCommand(Go("allmoves"))
-    } yield transformAllMovesOutput(output)
-
-  /** Transforms the output from the engine when given the command "go allmoves"
+  /** Transforms a Seq of moves into a space-delimited string of move strings
     *
-    * The engine's "go allmoves" command will always return output of the
-    * following shape: allmoves [.. .. .. ..] where the .. represents a move.
+    * The chess engine takes moves as a string separated by spaces, as in this
+    * command: position fen <fen> e2e4 d7d5 .. .. ..
     *
-    * This private method takes in that output and converts it into a sequence
-    * of Move objects to be returned by the allMoves method.
+    * This function takes the Seq of moves and makes a compatible string
     */
-  private def transformAllMovesOutput(output: String): Seq[Move] = {
-    val moves = output.dropWhile(_ != '[').trim
+  private def transformMovesInput(input: Seq[Move]): String = {
+    val moves = input.map(_.toString()).mkString(" ")
 
-    Move.fromListString(moves)
+    s"moves $moves"
   }
 }
 
