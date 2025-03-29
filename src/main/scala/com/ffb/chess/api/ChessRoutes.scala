@@ -22,19 +22,15 @@ object ChessRoutes extends Http4sDsl[IO] {
     jsonOf[IO, MoveRequest]
 
   def routes(): HttpRoutes[IO] =
-    HttpRoutes.of[IO] {
-      case req @ POST -> Root / "bestmove" =>
-        for {
-          moveReq <- req.as[MoveRequest]
-          bestMove <- ChessService.bestMove(moveReq.position, moveReq.engine)
-          response <- Ok(bestMove)
-        } yield response
-
-      case req @ POST -> Root / "allmoves" =>
-        for {
-          moveReq <- req.as[MoveRequest]
-          allMoves <- ChessService.allMoves(moveReq.position, moveReq.engine)
-          response <- Ok(allMoves)
-        } yield response
+    HttpRoutes.of[IO] { case req @ POST -> Root / "bestmove" =>
+      for {
+        moveReq <- req.as[MoveRequest]
+        bestMove <- ChessService.bestMove(
+          moveReq.position,
+          moveReq.moves,
+          moveReq.engine
+        )
+        response <- Ok(bestMove)
+      } yield response
     }
 }
