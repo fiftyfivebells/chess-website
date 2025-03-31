@@ -1,9 +1,10 @@
 import './App.css'
+import ChessBoard from './components/Chessboard'
 
 function App() {
   return (
     <>
-      <p>The app will go here.</p>
+      <ChessBoard />
     </>
   )
 }
