@@ -27,7 +27,7 @@ export type Square =
 
 export const [A8, H1] = [22, 99]; // these are the indices first and last board squares in the mailbox representation
 
-function squareToFileRank(square: Square): [number, number] {
+function squareToFileRankIndex(square: Square): [number, number] {
   const files = "abcdefgh";
   const ranks = "12345678";
 
@@ -37,24 +37,19 @@ function squareToFileRank(square: Square): [number, number] {
   return [file, rank];
 }
 
-function fileRankToMailboxIndex(file: number, rank: number): number {
-  const FIRST_EMPTY_ROWS = 20;
-  const ROW_PADDING = 2;
+function fileRankToMailboxIndex(fileIndex: number, rankIndex: number): number {
+  const rankOffset = 10;
+  const newRankIndex = A8 + rankOffset * rankIndex;
 
-  const rankOffset = (8 - rank) * ROW_PADDING;
-  return FIRST_EMPTY_ROWS + file + rankOffset;
+  return newRankIndex + fileIndex;
 }
 
-/* function squareToMailboxIndex(square: Square): number {
-  const [file, rank] = squareToFileRank(square);
+function squareToMailboxIndex(square: Square): number {
+  const [file, rank] = squareToFileRankIndex(square);
 
-  const FIRST_EMPTY_ROWS = 20;
-  const ROW_PADDING = 2;
-
-  const rankOffset = (8 - rank) * ROW_PADDING;
-  return FIRST_EMPTY_ROWS + file + rankOffset;
+  return fileRankToMailboxIndex(file, rank);
 }
- */
+
 //In the Mailbox Board, there is a 2 space buffer around the actual chess board to
 // make it more clear when a move goes outside the boundary of the board. This means
 // that the first index in the actual board doesn't start until the 22nd index in
@@ -62,8 +57,8 @@ function fileRankToMailboxIndex(file: number, rank: number): number {
 //
 // ############
 // ############
-// ##OOOOOOOO##
-// ##OOOOOOOO##
+// ##OOOOOOOO##      22
+// ##OOOOOOOO##      32
 // ##OOOOOOOO##
 // ##OOOOOOOO##
 // ##OOOOOOOO##
@@ -90,40 +85,89 @@ export class Board {
   setBoardFromFen(fen: string = INITIAL_FEN): (Piece | null)[] {
     const [position] = fen.split(" ");
 
-    return position.split("/").reduce((board, rank, rankIndex) => {
-      let file = 0;
-      return rank.split("").reduce((innerBoard, char) => {
-        if (parseInt(char)) {
-          file += parseInt(char);
-          return innerBoard;
-        } else {
-          const color: Color = char.toLowerCase() === char ? BLACK : WHITE;
-          const pieceType: PieceType = (
-            {
-              p: PAWN,
-              n: KNIGHT,
-              b: BISHOP,
-              r: ROOK,
-              q: QUEEN,
-              k: KING,
-            } as Record<string, PieceType>
-          )[char.toLowerCase()];
+    return position
+      .split("/")
+      .reduce((board: Array<Piece | null>, rank: string, rankIndex: number) => {
+        let file = 0;
+        return rank
+          .split("")
+          .reduce((innerBoard: Array<Piece | null>, char: string) => {
+            if (parseInt(char)) {
+              file += parseInt(char);
+              return innerBoard;
+            } else {
+              const color: Color = char.toLowerCase() === char ? BLACK : WHITE;
+              const pieceType: PieceType = (
+                {
+                  p: PAWN,
+                  n: KNIGHT,
+                  b: BISHOP,
+                  r: ROOK,
+                  q: QUEEN,
+                  k: KING,
+                } as Record<string, PieceType>
+              )[char.toLowerCase()];
 
-          const mailboxIndex = fileRankToMailboxIndex(file, rankIndex);
-          console.log(
-            `file is ${file} and rank is ${rankIndex}, so the mailbox index is ${mailboxIndex}`,
-          );
-          const newPiece = {
-            color: color,
-            pieceType: pieceType,
-          } as Piece;
+              const mailboxIndex = fileRankToMailboxIndex(file, rankIndex);
+              const newPiece = {
+                color: color,
+                pieceType: pieceType,
+              } as Piece;
 
-          file++;
-          return innerBoard.map((piece, index) =>
-            index === mailboxIndex ? newPiece : piece,
-          );
-        }
-      }, board.slice());
-    }, Array<Piece | null>(120).fill(null));
+              file++;
+              return innerBoard.map((piece, index) =>
+                index === mailboxIndex ? newPiece : piece,
+              );
+            }
+          }, board.slice());
+      }, Array<Piece | null>(120).fill(null));
+  }
+
+  getBoardFenRep(): string {
+    const getChessBoard = (mailbox: (Piece | null)[]): (Piece | null)[][] => {
+      const mainBoard = mailbox.slice(20, 100);
+
+      const rankList = mainBoard.reduce(
+        (acc, _, index) => {
+          if (index % 10 === 0) acc.push(mainBoard.slice(index, index + 10));
+
+          return acc;
+        },
+        [] as (Piece | null)[][],
+      );
+
+      return rankList.map((rank) => rank.slice(2));
+    };
+
+    const processBoardRow = (boardRow: (Piece | null)[]): string => {
+      type Accumulator = {
+        rowString: string;
+        blanks: number;
+      };
+
+      return boardRow.reduce(
+        (acc: Accumulator, piece: Piece | null) => {
+          const { rowString, blanks } = acc;
+
+          if (blanks === 7) return { rowString: "8", blanks: 8 };
+
+          if (!piece) return { rowString: rowString, blanks: blanks + 1 };
+
+          const totalBlanks = blanks > 0 ? `${blanks}` : "";
+
+          return {
+            rowString: `${rowString}${piece.pieceType}${totalBlanks}`,
+            blanks: 0,
+          };
+        },
+        { rowString: "", blanks: 0 } as Accumulator,
+      ).rowString;
+    };
+
+    const chessBoard = getChessBoard(this._mailbox);
+
+    const fen = chessBoard.map((row) => processBoardRow(row));
+
+    return fen.join("/");
   }
 }
