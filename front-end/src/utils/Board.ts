@@ -79,7 +79,22 @@ export class Board {
   }
 
   showBoard(): void {
-    console.log(this._mailbox);
+    const chessBoard = this.getChessBoard(this._mailbox);
+
+    const boardStrings = chessBoard.map((row, index) => {
+      const rowString = row.reduce((acc: string, piece: Piece | null) => {
+        const char = !piece ? ". " : `${piece.pieceType} `;
+        return `${acc}${char}`;
+      }, "");
+
+      return `${index + 1}| ${rowString}`;
+    });
+
+    const totalBoard = boardStrings
+      .concat("   ---------------")
+      .concat("   a b c d e f g h\n");
+
+    console.log(totalBoard.join("\n"));
   }
 
   setBoardFromFen(fen: string = INITIAL_FEN): (Piece | null)[] {
@@ -123,22 +138,33 @@ export class Board {
       }, Array<Piece | null>(120).fill(null));
   }
 
+  /**
+   * @remarks
+   * This method takes the mailbox board and turns it into something that is a little more straightforward
+   * to use. It cuts the two buffer rows (20 elements each) off each end of the array, maps the array into
+   * a nested structure where each row is a row in the chess board, and then removes the remaining padding
+   * elements to give an 8 x 8 board where each element is either a Piece or empty.
+   *
+   * @param mailbox - the mailbox board representation for the chess game.
+   *
+   * @returns an Array<Piece | null> of length 8, each element being another Array<Piece | null>
+   * */
+  private getChessBoard(mailbox: (Piece | null)[]): (Piece | null)[][] {
+    const mainBoard = mailbox.slice(20, 100);
+
+    const rankList = mainBoard.reduce(
+      (acc, _, index) => {
+        if (index % 10 === 0) acc.push(mainBoard.slice(index, index + 10));
+
+        return acc;
+      },
+      [] as (Piece | null)[][],
+    );
+
+    return rankList.map((rank) => rank.slice(2));
+  }
+
   getBoardFenRep(): string {
-    const getChessBoard = (mailbox: (Piece | null)[]): (Piece | null)[][] => {
-      const mainBoard = mailbox.slice(20, 100);
-
-      const rankList = mainBoard.reduce(
-        (acc, _, index) => {
-          if (index % 10 === 0) acc.push(mainBoard.slice(index, index + 10));
-
-          return acc;
-        },
-        [] as (Piece | null)[][],
-      );
-
-      return rankList.map((rank) => rank.slice(2));
-    };
-
     const processBoardRow = (boardRow: (Piece | null)[]): string => {
       type Accumulator = {
         rowString: string;
@@ -164,7 +190,7 @@ export class Board {
       ).rowString;
     };
 
-    const chessBoard = getChessBoard(this._mailbox);
+    const chessBoard = this.getChessBoard(this._mailbox);
 
     const fen = chessBoard.map((row) => processBoardRow(row));
 
