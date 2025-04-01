@@ -1,12 +1,13 @@
-import './App.css'
-import ChessBoard from './components/Chessboard'
+import "./App.css";
+import ChessGame from "./components/ChessGame";
+import { ChessGameProvider } from "./context/ChessGameContext";
 
 function App() {
   return (
-    <>
-      <ChessBoard />
-    </>
-  )
+    <ChessGameProvider>
+      <ChessGame />
+    </ChessGameProvider>
+  );
 }
 
-export default App
+export default App;
