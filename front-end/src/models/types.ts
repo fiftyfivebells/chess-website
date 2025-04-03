@@ -11,18 +11,18 @@ export type Piece = {
 // that the first index in the actual board doesn't start until the 22nd index in
 // the overall array. Example:
 //
-// ############
-// ############
-// ##OOOOOOOO##      22
-// ##OOOOOOOO##      32
-// ##OOOOOOOO##
-// ##OOOOOOOO##
-// ##OOOOOOOO##
-// ##OOOOOOOO##
-// ##OOOOOOOO##
-// ##OOOOOOOO##
-// ############
-// ############
+// ##########
+// ##########
+// #OOOOOOOO#
+// #OOOOOOOO#
+// #OOOOOOOO#
+// #OOOOOOOO#
+// #OOOOOOOO#
+// #OOOOOOOO#
+// #OOOOOOOO#
+// #OOOOOOOO#
+// ##########
+// ##########
 //
 // O represents a square in the chess board, while # is an out of bounds spot. This
 // will make it easier to detect when a move has gone off the board (and is therefore
