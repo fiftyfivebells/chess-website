@@ -11,9 +11,9 @@ import {
   WHITE,
 } from "../models/constants";
 
-function squareToFileRankIndex(square: Square): [number, number] {
+export function squareToFileRankIndex(square: Square): [number, number] {
   const files = "abcdefgh";
-  const ranks = "12345678";
+  const ranks = "87654321";
 
   const file = files.indexOf(square[0]);
   const rank = ranks.indexOf(square[1]);
@@ -41,14 +41,14 @@ export function mailboxIndexToSquare(mailboxIndex: number): Square {
   if (mailboxIndex < 22 || mailboxIndex > 99) return "oob";
 
   const files = "abcdefgh";
-  const ranks = "12345678";
+  const ranks = "87654321";
 
-  const quotient = (mailboxIndex - 20) / 10;
-  const remainder = mailboxIndex % 10;
+  const quotient = Math.floor((mailboxIndex - 20) / 10);
+  const remainder = (mailboxIndex - 2) % 10;
 
-  return remainder < 2
+  return remainder > 7
     ? "oob"
-    : (`${files[quotient]}${ranks[remainder]}` as Square);
+    : (`${files[remainder]}${ranks[quotient]}` as Square);
 }
 
 export function createBoardFromFen(fen: string = INITIAL_STATE_FEN): Board {
@@ -186,18 +186,38 @@ export function isValidDestination(
   return square !== "oob" && (target === null || target.color !== activeSide);
 }
 
+export function isValidPawnAttack(
+  board: Board,
+  start: Square,
+  offset: number,
+  activeSide: Color,
+  epSquare?: Square,
+): boolean {
+  const validDestination = isValidDestination(board, start, offset, activeSide);
+
+  const mailboxIndex: number = squareToMailboxIndex(start) + offset;
+  const target: Piece | null = board[mailboxIndex];
+  const targetSquare: Square = mailboxIndexToSquare(mailboxIndex);
+
+  // this function returns true if the destination is valid, and the piece at the destination
+  // is not null OR the target destination happens to be the en passant square
+  return (
+    validDestination && (!!target || (!!epSquare && epSquare === targetSquare))
+  );
+}
+
 export function isPawnStartingRank(square: Square, piece: Piece): boolean {
   if (piece.pieceType !== PAWN) return false;
 
-  const [rank] = squareToFileRankIndex(square);
+  const [_, rank] = squareToFileRankIndex(square);
 
   return piece.color === BLACK ? rank === 1 : rank === 6;
 }
 
-export function isLastRank(square: Square, piece: Piece): boolean {
+export function isLastRank(square: Square, activeSide: Color): boolean {
   const [rank] = squareToFileRankIndex(square);
 
-  return piece.color === BLACK ? rank === 0 : rank === 7;
+  return activeSide === BLACK ? rank === 0 : rank === 7;
 }
 
 export function printBoard(board: Board): void {
