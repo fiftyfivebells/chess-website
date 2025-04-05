@@ -1,5 +1,9 @@
 import { A8, Board, Color, Piece, PieceType, Square } from "../models/types";
 import {
+  N,
+  E,
+  S,
+  W,
   BISHOP,
   BLACK,
   INITIAL_STATE_FEN,
@@ -161,6 +165,16 @@ export function getPieceAtSquare(board: Board, square: Square): Piece | null {
   return board[mailboxIndex];
 }
 
+function getPiecesByColor(
+  board: Board,
+  color: Color,
+  pieceType: PieceType,
+): Board {
+  return board.filter(
+    (piece) => piece && piece.color === color && piece.pieceType === pieceType,
+  );
+}
+
 export function placeOnSquare(
   board: Board,
   square: Square,
@@ -218,6 +232,93 @@ export function isLastRank(square: Square, activeSide: Color): boolean {
   const [rank] = squareToFileRankIndex(square);
 
   return activeSide === BLACK ? rank === 0 : rank === 7;
+}
+
+export function isSquareUnderAttack(
+  board: Board,
+  square: Square,
+  activeSide: Color,
+): boolean {
+  const bishopDirections = [N + E, S + E, S + W, N + W];
+  const rookDirections = [N, E, S, W];
+  const queenDirections = bishopDirections.concat(rookDirections);
+  const directions = {
+    b: bishopDirections,
+    r: rookDirections,
+    q: queenDirections,
+  } as Record<PieceType, number[]>;
+
+  return knightAttacksSquare(board, square, activeSide);
+}
+
+function knightAttacksSquare(
+  board: Board,
+  square: Square,
+  activeSide: Color,
+): boolean {
+  const knights = getPiecesByColor(board, activeSide, KNIGHT);
+
+  if (knights.length === 0) return false;
+
+  const directions = [
+    N + N + E,
+    E + E + N,
+    E + E + S,
+    S + S + E,
+    S + S + W,
+    W + W + S,
+    W + W + N,
+    N + N + W,
+  ];
+
+  const enemyColor = activeSide === WHITE ? BLACK : WHITE;
+  const mailboxIndex = squareToMailboxIndex(square);
+
+  const attackedSquares = directions.reduce(
+    (squares, direction): Set<Square> => {
+      const targetSquare = mailboxIndexToSquare(mailboxIndex + direction);
+      const target = board[mailboxIndex + direction];
+
+      if (targetSquare !== "oob" && target && target.color === enemyColor) {
+        squares.add(square);
+      }
+
+      return squares;
+    },
+    new Set<Square>(),
+  );
+
+  return attackedSquares.has(square);
+}
+
+function slidingPieceAttacksSquare(
+  board: Board,
+  square: Square,
+  activeSide: Color,
+  pieceType: PieceType,
+  directions: number[],
+): boolean {
+  const attackers = getPiecesByColor(board, activeSide, pieceType);
+
+  if (attackers.length === 0) return false;
+
+  const enemyColor = activeSide === WHITE ? BLACK : WHITE;
+  const mailboxIndex = squareToMailboxIndex(square);
+
+  directions.forEach((direction) => {
+    let nextIndex = mailboxIndex + direction;
+    let nextSquare = mailboxIndexToSquare(nextIndex);
+    while (nextSquare !== "oob" && !board[nextIndex]) {
+      nextIndex += direction;
+      nextSquare = mailboxIndexToSquare(nextIndex);
+    }
+
+    const target = board[nextIndex];
+    if (nextSquare === square && target && target.color === enemyColor)
+      return true;
+  });
+
+  return false;
 }
 
 export function printBoard(board: Board): void {
