@@ -25,3 +25,6 @@ export const INITIAL_GAME_STATE = {
   isStalemate: false,
   isDraw: false,
 };
+
+// cardinal directions to be used for navigating the board
+export const [N, E, S, W] = [-10, 1, 10, -1];
