@@ -41,7 +41,7 @@ export type Square =
     'a1' | 'b1' | 'c1' | 'd1' | 'e1' | 'f1' | 'g1' | 'h1' |
     'oob' // oob = out of bounds
 
-export const [A8, H1] = [22, 99]; // these are the indices first and last board squares in the mailbox representation
+export const [A8, H8, A1, H1] = [22, 29, 92, 99]; // these are the indices of the corners of the board in the mailbox representation
 
 export interface Move {
   from: Square;
