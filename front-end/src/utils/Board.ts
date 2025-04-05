@@ -165,16 +165,6 @@ export function getPieceAtSquare(board: Board, square: Square): Piece | null {
   return board[mailboxIndex];
 }
 
-function getPiecesByColor(
-  board: Board,
-  color: Color,
-  pieceType: PieceType,
-): Board {
-  return board.filter(
-    (piece) => piece && piece.color === color && piece.pieceType === pieceType,
-  );
-}
-
 export function placeOnSquare(
   board: Board,
   square: Square,
@@ -239,16 +229,35 @@ export function isSquareUnderAttack(
   square: Square,
   activeSide: Color,
 ): boolean {
-  const bishopDirections = [N + E, S + E, S + W, N + W];
-  const rookDirections = [N, E, S, W];
-  const queenDirections = bishopDirections.concat(rookDirections);
-  const directions = {
-    b: bishopDirections,
-    r: rookDirections,
-    q: queenDirections,
-  } as Record<PieceType, number[]>;
+  return (
+    pawnAttacksSquare(board, square, activeSide) ||
+    knightAttacksSquare(board, square, activeSide) ||
+    diagonalPieceAttacksSquare(board, square, activeSide) ||
+    straightPieceAttacksSquare(board, square, activeSide)
+  );
+}
 
-  return knightAttacksSquare(board, square, activeSide);
+function pawnAttacksSquare(
+  board: Board,
+  square: Square,
+  activeSide: Color,
+): boolean {
+  const pawnAttacks = {
+    white: [N + W, N + E],
+    black: [S + W, S + E],
+  } as Record<Color, number[]>;
+
+  const enemyColor = activeSide === WHITE ? BLACK : WHITE;
+  const mailboxIndex = squareToMailboxIndex(square);
+
+  pawnAttacks[activeSide].forEach((attack) => {
+    const target = board[mailboxIndex + attack];
+
+    if (target && target.color === enemyColor && target.pieceType === PAWN)
+      return true;
+  });
+
+  return false;
 }
 
 function knightAttacksSquare(
@@ -256,11 +265,7 @@ function knightAttacksSquare(
   square: Square,
   activeSide: Color,
 ): boolean {
-  const knights = getPiecesByColor(board, activeSide, KNIGHT);
-
-  if (knights.length === 0) return false;
-
-  const directions = [
+  const knightDirections = [
     N + N + E,
     E + E + N,
     E + E + S,
@@ -274,34 +279,57 @@ function knightAttacksSquare(
   const enemyColor = activeSide === WHITE ? BLACK : WHITE;
   const mailboxIndex = squareToMailboxIndex(square);
 
-  const attackedSquares = directions.reduce(
-    (squares, direction): Set<Square> => {
-      const targetSquare = mailboxIndexToSquare(mailboxIndex + direction);
-      const target = board[mailboxIndex + direction];
+  knightDirections.forEach((direction) => {
+    const target = board[mailboxIndex + direction];
 
-      if (targetSquare !== "oob" && target && target.color === enemyColor) {
-        squares.add(square);
-      }
+    if (target && target.color === enemyColor && target.pieceType === KNIGHT)
+      return true;
+  });
 
-      return squares;
-    },
-    new Set<Square>(),
-  );
-
-  return attackedSquares.has(square);
+  return false;
 }
 
-function slidingPieceAttacksSquare(
+function diagonalPieceAttacksSquare(
   board: Board,
   square: Square,
   activeSide: Color,
-  pieceType: PieceType,
-  directions: number[],
 ): boolean {
-  const attackers = getPiecesByColor(board, activeSide, pieceType);
+  const diagonals = [N + E, S + E, S + W, N + W];
+  const diagonalPieces = new Set<PieceType>([BISHOP, QUEEN, KING]);
 
-  if (attackers.length === 0) return false;
+  return pieceAttacksSquareInDirection(
+    board,
+    square,
+    activeSide,
+    diagonals,
+    diagonalPieces,
+  );
+}
 
+function straightPieceAttacksSquare(
+  board: Board,
+  square: Square,
+  activeSide: Color,
+): boolean {
+  const straights = [N, E, S, W];
+  const straightPieces = new Set<PieceType>([ROOK, QUEEN, KING]);
+
+  return pieceAttacksSquareInDirection(
+    board,
+    square,
+    activeSide,
+    straights,
+    straightPieces,
+  );
+}
+
+function pieceAttacksSquareInDirection(
+  board: Board,
+  square: Square,
+  activeSide: Color,
+  directions: number[],
+  pieceTypes: Set<PieceType>,
+): boolean {
   const enemyColor = activeSide === WHITE ? BLACK : WHITE;
   const mailboxIndex = squareToMailboxIndex(square);
 
@@ -314,7 +342,11 @@ function slidingPieceAttacksSquare(
     }
 
     const target = board[nextIndex];
-    if (nextSquare === square && target && target.color === enemyColor)
+    if (
+      target &&
+      pieceTypes.has(target.pieceType) &&
+      target.color === enemyColor
+    )
       return true;
   });
 
