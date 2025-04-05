@@ -21,6 +21,7 @@ import {
 import {
   getBoardFenRep,
   getPieceAtSquare,
+  isLastRank,
   isPawnStartingRank,
   isValidDestination,
   mailboxIndexToSquare,
@@ -47,7 +48,6 @@ export function useChessGame() {
 
       // update the board
       placeOnSquare(newBoard, from, null);
-
       placeOnSquare(newBoard, to, movingPiece);
 
       // update the move counts
@@ -86,17 +86,23 @@ export function useChessGame() {
         isDraw: isDraw,
       });
 
-      return false;
+      return true;
     },
     [gameState],
   );
+
+  // const unApplyMove = useCallback(
+  //   (move: Move): boolean => {
+  //     return true;
+  //   },
+  //   [gameState],
+  // );
 
   function getPseudoLegalMovesForPiece(
     state: GameState,
     square: Square,
   ): Move[] {
     const piece = getPieceAtSquare(state.board, square);
-
     if (!piece) return [];
 
     const moves: Move[] = [];
@@ -125,6 +131,7 @@ export function useChessGame() {
     switch (piece.pieceType) {
       case PAWN: {
         const pawnAttacks = [N + E, N + W];
+        const promotionPieces = [KNIGHT, BISHOP, ROOK, QUEEN];
 
         // handle pawn attacks
         pawnAttacks.forEach((attack) => {
@@ -132,32 +139,59 @@ export function useChessGame() {
           const toIndex = squareToMailboxIndex(square) + offset;
           const targetSquare = mailboxIndexToSquare(toIndex);
 
+          // we need to know whether the target is valid because pawns can only move diagonally when attacking
           const target = getPieceAtSquare(state.board, targetSquare);
           const validTarget = target && target.color !== state.activeSide;
 
-          // only make the attack move if the target piece is the opposit color OR if the
+          // only make the attack move if the target piece is the opposite color OR if the
           // target square is the en passant square
-          if (validTarget || state.epSquare === targetSquare) {
-            moves.push({
-              from: square,
-              to: targetSquare,
-            });
+          if (
+            isValidDestination(state.board, square, offset, state.activeSide) &&
+            (validTarget || state.epSquare === targetSquare)
+          ) {
+            if (isLastRank(square, state.activeSide)) {
+              promotionPieces.forEach((promotion) => {
+                moves.push({
+                  from: square,
+                  to: targetSquare,
+                  promotion: promotion,
+                });
+              });
+            } else {
+              moves.push({
+                from: square,
+                to: targetSquare,
+              });
+            }
           }
         });
 
-        // handle double pawn move
-        if (isPawnStartingRank(square, piece)) {
-          const doublePush = state.activeSide === WHITE ? N * -2 : N * 2;
-          const toIndex = squareToMailboxIndex(square) + doublePush;
-          const destinationSquare = mailboxIndexToSquare(toIndex);
+        const pawnDirection = state.activeSide === WHITE ? N : S;
 
-          // only make the move if the destination square is empty
-          if (!getPieceAtSquare(state.board, destinationSquare)) {
-            moves.push({
-              from: square,
-              to: destinationSquare,
-            });
-          }
+        // handle single pawn push
+        const singlePush = pawnDirection;
+        if (
+          isValidDestination(state.board, square, singlePush, state.activeSide)
+        ) {
+          const toIndex = squareToMailboxIndex(square) + singlePush;
+
+          moves.push({
+            from: square,
+            to: mailboxIndexToSquare(toIndex),
+          });
+        }
+
+        // handle double pawn move
+        const doublePush = singlePush + pawnDirection;
+        if (
+          isPawnStartingRank(square, piece) &&
+          isValidDestination(state.board, square, doublePush, state.activeSide)
+        ) {
+          const toIndex = squareToMailboxIndex(square) + doublePush;
+          moves.push({
+            from: square,
+            to: mailboxIndexToSquare(toIndex),
+          });
         }
 
         break;
@@ -199,9 +233,27 @@ export function useChessGame() {
       }
     }
 
+    // handle castles separately
+    if (piece.pieceType === KING) {
+      // to do a castle, we need to be sure:
+      //   1. the active side has castle rights
+      //   2. the squares between the rook and king are not under attack
+    }
+
     return moves;
   }
 
+  /**
+   * @remarks
+   * This method is a helper that checks whether a move is available to the active side. It will be used
+   * to prevent the user from moving the wrong side's pieces, moving their own pieces in incorrect ways,
+   * or making a move that leaves the king in check.
+   *
+   * @param board - the current state's board array
+   * @param move  - the move whose validity is being checked
+   *
+   * @return a boolean that says whether the move is valid or not
+   * */
   function isValidMove(board: Board, move: Move): boolean {
     return true;
   }
@@ -212,17 +264,13 @@ export function useChessGame() {
     board.forEach((piece, mailboxIndex) => {
       if (piece && piece.color == activeSide) {
         const square = mailboxIndexToSquare(mailboxIndex);
-        const moves = getPseudoLegalMovesForPiece(
-          { board: board, activeSide: activeSide },
-          square,
-        );
+        const moves = getPseudoLegalMovesForPiece(gameState, square);
 
         allMoves.concat(moves);
       }
     });
 
-    // TODO: this isn't quite right yet, since these are pseudo-legal moves.
-    // maybe make an unapplyMove function and check which moves cause the king to be in check
+    // TODO: this needs to be updated to only include legal moves in all moves
     return allMoves.length === 0;
   }
 
@@ -244,5 +292,6 @@ export function useChessGame() {
   return {
     gameState,
     applyMove,
+    getPseudoLegalMovesForPiece,
   };
 }
