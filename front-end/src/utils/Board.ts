@@ -224,6 +224,15 @@ export function isLastRank(square: Square, activeSide: Color): boolean {
   return activeSide === BLACK ? rank === 0 : rank === 7;
 }
 
+export function isKingUnderAttack(board: Board, activeSide: Color): boolean {
+  const kingIndex = board.findIndex(
+    (p) => p?.color === activeSide && p.pieceType === KING,
+  );
+  const kingSquare = mailboxIndexToSquare(kingIndex);
+
+  return isSquareUnderAttack(board, kingSquare, activeSide);
+}
+
 export function isSquareUnderAttack(
   board: Board,
   square: Square,
@@ -250,14 +259,16 @@ function pawnAttacksSquare(
   const enemyColor = activeSide === WHITE ? BLACK : WHITE;
   const mailboxIndex = squareToMailboxIndex(square);
 
-  pawnAttacks[activeSide].forEach((attack) => {
+  const doesAttack = pawnAttacks[activeSide].reduce((acc, attack) => {
     const target = board[mailboxIndex + attack];
 
     if (target && target.color === enemyColor && target.pieceType === PAWN)
-      return true;
-  });
+      return true || acc;
 
-  return false;
+    return acc;
+  }, false);
+
+  return doesAttack;
 }
 
 function knightAttacksSquare(
@@ -279,14 +290,17 @@ function knightAttacksSquare(
   const enemyColor = activeSide === WHITE ? BLACK : WHITE;
   const mailboxIndex = squareToMailboxIndex(square);
 
-  knightDirections.forEach((direction) => {
+  const doesAttack = knightDirections.reduce((acc, direction) => {
     const target = board[mailboxIndex + direction];
 
-    if (target && target.color === enemyColor && target.pieceType === KNIGHT)
-      return true;
-  });
+    if (target && target.color === enemyColor && target.pieceType === KNIGHT) {
+      return acc || true;
+    }
 
-  return false;
+    return acc;
+  }, false);
+
+  return doesAttack;
 }
 
 function diagonalPieceAttacksSquare(
@@ -333,7 +347,7 @@ function pieceAttacksSquareInDirection(
   const enemyColor = activeSide === WHITE ? BLACK : WHITE;
   const mailboxIndex = squareToMailboxIndex(square);
 
-  directions.forEach((direction) => {
+  const doesAttack = directions.reduce((acc, direction) => {
     let nextIndex = mailboxIndex + direction;
     let nextSquare = mailboxIndexToSquare(nextIndex);
     while (nextSquare !== "oob" && !board[nextIndex]) {
@@ -347,10 +361,35 @@ function pieceAttacksSquareInDirection(
       pieceTypes.has(target.pieceType) &&
       target.color === enemyColor
     )
-      return true;
-  });
+      return acc || true;
 
-  return false;
+    return acc;
+  }, false);
+
+  return doesAttack;
+}
+
+export function movePiece(board: Board, from: Square, to: Square): Board {
+  const fromIndex = squareToMailboxIndex(from);
+  const toIndex = squareToMailboxIndex(to);
+
+  const newBoard = [...board];
+
+  const movingPiece = board[fromIndex];
+  const destinationPiece = board[toIndex];
+
+  if (
+    movingPiece &&
+    destinationPiece &&
+    movingPiece.color === destinationPiece.color
+  ) {
+    return newBoard;
+  }
+
+  newBoard[fromIndex] = null;
+  newBoard[toIndex] = movingPiece;
+
+  return newBoard;
 }
 
 export function printBoard(board: Board): void {
