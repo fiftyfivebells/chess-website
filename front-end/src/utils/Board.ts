@@ -130,10 +130,17 @@ export function getBoardFenRep(mailbox: Board): string {
     };
 
     return boardRow.reduce(
-      (acc: Accumulator, piece: Piece | null) => {
+      (acc: Accumulator, piece: Piece | null, index: number) => {
         const { rowString, blanks } = acc;
 
-        if (blanks === 7) return { rowString: "8", blanks: 8 };
+        if (index == 7 && !piece) {
+          return {
+            rowString: `${rowString}${blanks + 1}`,
+            blanks: 0,
+          };
+        }
+
+        //        if (blanks === 7 && !piece) return { rowString: "8", blanks: 8 };
 
         if (!piece) return { rowString: rowString, blanks: blanks + 1 };
 
@@ -144,7 +151,7 @@ export function getBoardFenRep(mailbox: Board): string {
             : piece.pieceType;
 
         return {
-          rowString: `${rowString}${pieceChar}${totalBlanks}`,
+          rowString: `${rowString}${totalBlanks}${pieceChar}`,
           blanks: 0,
         };
       },
