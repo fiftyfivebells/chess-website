@@ -29,7 +29,6 @@ export default function ChessGame() {
     <>
       <Box width={650}>
         <Chessboard
-          key={getBoardFenRep(gameState.board)}
           position={getBoardFenRep(gameState.board)}
           onPieceDrop={onDrop}
         />
