@@ -21,10 +21,12 @@ import {
 import {
   getBoardFenRep,
   getPieceAtSquare,
+  isKingUnderAttack,
   isLastRank,
   isPawnStartingRank,
   isValidDestination,
   mailboxIndexToSquare,
+  movePiece,
   placeOnSquare,
   squareToMailboxIndex,
 } from "../utils/Board";
@@ -35,9 +37,7 @@ export function useChessGame() {
   const applyMove = useCallback(
     (move: Move): boolean => {
       const { from, to, promotion } = move;
-      const { board, activeSide, moveHistory } = gameState;
-
-      // check here if the move is valid
+      const { board, activeSide, history } = gameState;
 
       // create new board for after the move
       const newBoard = [...board];
@@ -79,7 +79,7 @@ export function useChessGame() {
         fullMoveCount: newFullMoveCount,
         rule50: newRule50,
 
-        moveHistory: [...moveHistory, move],
+        history: [...history, gameState],
         isCheck: isCheck,
         isCheckmate: isCheckMate,
         isStalemate: isStaleMate,
@@ -91,12 +91,17 @@ export function useChessGame() {
     [gameState],
   );
 
-  // const unApplyMove = useCallback(
-  //   (move: Move): boolean => {
-  //     return true;
-  //   },
-  //   [gameState],
-  // );
+  const unApplyPreviousMove = useCallback((): boolean => {
+    const newHistory = [...gameState.history];
+
+    newHistory.pop(); // this removes the most recent game state from the history
+
+    const oldState = newHistory.pop();
+    if (!oldState) return false;
+
+    setGameState(oldState);
+    return true;
+  }, [gameState]);
 
   function getPseudoLegalMovesForPiece(
     state: GameState,
@@ -203,7 +208,6 @@ export function useChessGame() {
             isValidDestination(state.board, square, direction, state.activeSide)
           ) {
             const toIndex = squareToMailboxIndex(square) + direction;
-
             moves.push({
               from: square,
               to: mailboxIndexToSquare(toIndex),
@@ -243,6 +247,48 @@ export function useChessGame() {
     return moves;
   }
 
+  function getAllLegalMoves(board: Board, activeSide: Color): Move[] {
+    const squares = board.reduce((squares, piece, index) => {
+      if (piece && piece.color === activeSide) {
+        squares.push(mailboxIndexToSquare(index));
+      }
+      return squares;
+    }, new Array<Square>());
+
+    const pseudoLegalMoves = squares.reduce((moves, square) => {
+      const pieceMoves = getPseudoLegalMovesForPiece(gameState, square);
+
+      return moves.concat(pieceMoves);
+    }, new Array<Move>());
+
+    return pseudoLegalMoves.reduce((legalMoves, move) => {
+      if (isLegalMove(board, move)) {
+        legalMoves.push(move);
+      }
+
+      return legalMoves;
+    }, new Array<Move>());
+  }
+
+  /**
+   * @remarks
+   * This method is a helper that checks whether a move is legal. A legal move is one that does not
+   * leave the active side's king in check. If the king is in check after the move, it is illegal and
+   * needs to be undone. This will be called on a pseudo-legal move, so there is no need to validate
+   * simple things like whether the piece on the target square is on the same side as the one at the
+   * from square.
+   *
+   * @param board - the current state's board array
+   * @param move  - the move whose legality is being checked
+   *
+   * @return a boolean that says whether the move is legal or not
+   * */
+  function isLegalMove(board: Board, move: Move): boolean {
+    const newBoard = movePiece(board, move.from, move.to);
+
+    return !isKingUnderAttack(newBoard, gameState.activeSide);
+  }
+
   /**
    * @remarks
    * This method is a helper that checks whether a move is available to the active side. It will be used
@@ -255,7 +301,14 @@ export function useChessGame() {
    * @return a boolean that says whether the move is valid or not
    * */
   function isValidMove(board: Board, move: Move): boolean {
-    return true;
+    const legalMoves = getAllLegalMoves(board, gameState.activeSide);
+
+    return !!legalMoves.find(
+      (m) =>
+        m.from === move.from &&
+        m.to === move.to &&
+        (m.promotion === move.promotion || (!move.promotion && !m.promotion)),
+    );
   }
 
   function hasNoLegalMoves(board: Board, activeSide: Color): boolean {
@@ -292,6 +345,6 @@ export function useChessGame() {
   return {
     gameState,
     applyMove,
-    getPseudoLegalMovesForPiece,
+    isValidMove,
   };
 }

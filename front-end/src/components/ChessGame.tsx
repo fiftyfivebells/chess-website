@@ -1,17 +1,38 @@
 import { Box } from "@mui/material";
 import { Chessboard } from "react-chessboard";
-import { getBoardFenRep, printBoard } from "../utils/Board";
 import { useChessContext } from "../context/ChessGameContext";
+import { Square } from "../models/types";
+import { getBoardFenRep } from "../utils/Board";
 
 export default function ChessGame() {
-  const { gameState } = useChessContext();
+  const { gameState, isValidMove, applyMove } = useChessContext();
+  //("rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQk - 3 1");
 
-  printBoard(gameState.board);
+  //  printBoard(gameState.board);
+
+  function onDrop(sourceSquare: Square, targetSquare: Square): boolean {
+    const move = {
+      from: sourceSquare,
+      to: targetSquare,
+    };
+
+    if (isValidMove(gameState.board, move)) {
+      return applyMove(move);
+    }
+
+    return false;
+  }
+
+  console.log(getBoardFenRep(gameState.board));
 
   return (
     <>
       <Box width={650}>
-        <Chessboard position={getBoardFenRep(gameState.board)} />
+        <Chessboard
+          key={getBoardFenRep(gameState.board)}
+          position={getBoardFenRep(gameState.board)}
+          onPieceDrop={onDrop}
+        />
       </Box>
     </>
   );
