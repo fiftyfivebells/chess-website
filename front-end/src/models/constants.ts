@@ -1,5 +1,5 @@
 import { createBoardFromFen } from "../utils/Board";
-import { Color, Move, PieceType } from "./types";
+import { Color, GameState, PieceType } from "./types";
 
 export const WHITE: Color = "white";
 export const BLACK: Color = "black";
@@ -19,7 +19,7 @@ export const INITIAL_GAME_STATE = {
   activeSide: WHITE,
   fullMoveCount: 1,
   rule50: 0,
-  moveHistory: [] as Move[],
+  history: [] as GameState[],
   isCheck: false,
   isCheckmate: false,
   isStalemate: false,

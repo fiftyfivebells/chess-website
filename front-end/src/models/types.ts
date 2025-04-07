@@ -57,7 +57,7 @@ export interface GameState {
   fullMoveCount: number;
   rule50: number;
 
-  moveHistory: Move[];
+  history: GameState[];
   isCheck: boolean;
   isCheckmate: boolean;
   isStalemate: boolean;
