@@ -16,14 +16,12 @@ export default function ChessGame() {
       to: targetSquare,
     };
 
-    if (isValidMove(gameState.board, move)) {
+    if (isValidMove(move)) {
       return applyMove(move);
     }
 
     return false;
   }
-
-  console.log(getBoardFenRep(gameState.board));
 
   return (
     <>

@@ -1,11 +1,11 @@
 import { createContext, ReactNode, useContext } from "react";
 import { useChessGame } from "../hooks/useChessGame";
-import { Board, GameState, Move } from "../models/types";
+import { GameState, Move } from "../models/types";
 
 interface ChessGameContextType {
   gameState: GameState;
   applyMove: (move: Move) => boolean;
-  isValidMove: (board: Board, move: Move) => boolean;
+  isValidMove: (move: Move) => boolean;
 }
 
 const ChessGameContext = createContext<ChessGameContextType | undefined>(

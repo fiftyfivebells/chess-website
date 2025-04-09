@@ -1,38 +1,23 @@
 import { useCallback, useState } from "react";
 import {
-  Board,
-  Color,
-  GameState,
-  Move,
-  PieceType,
-  Square,
-} from "../models/types";
-import {
-  BISHOP,
   BLACK,
   INITIAL_GAME_STATE,
-  KING,
-  KNIGHT,
+  INITIAL_STATE_MOVES,
   PAWN,
-  QUEEN,
-  ROOK,
   WHITE,
 } from "../models/constants";
+import { Board, Color, GameState, Move } from "../models/types";
 import {
+  getAllLegalMoves,
   getBoardFenRep,
   getPieceAtSquare,
   isKingUnderAttack,
-  isLastRank,
-  isPawnStartingRank,
-  isValidDestination,
-  mailboxIndexToSquare,
-  movePiece,
   placeOnSquare,
-  squareToMailboxIndex,
 } from "../utils/Board";
 
 export function useChessGame() {
   const [gameState, setGameState] = useState<GameState>(INITIAL_GAME_STATE);
+  const [legalMoves, setLegalMoves] = useState<Move[]>(INITIAL_STATE_MOVES);
 
   const applyMove = useCallback(
     (move: Move): boolean => {
@@ -59,7 +44,7 @@ export function useChessGame() {
           : gameState.fullMoveCount;
 
       const nextActiveSide = activeSide === WHITE ? BLACK : WHITE;
-      const opponentNoLegalMoves = hasNoLegalMoves(newBoard, nextActiveSide);
+      const opponentNoLegalMoves = hasNoLegalMoves();
 
       // check for check and checkmate
       const isCheck = isSideInCheck(newBoard, nextActiveSide);
@@ -71,7 +56,7 @@ export function useChessGame() {
       const fiftyMoveRule = newRule50 >= 50;
       const isDraw = isStaleMate || insufficientMaterial || fiftyMoveRule;
 
-      setGameState({
+      const newGameState: GameState = {
         board: newBoard,
         activeSide: nextActiveSide,
         epSquare: undefined,
@@ -84,7 +69,11 @@ export function useChessGame() {
         isCheckmate: isCheckMate,
         isStalemate: isStaleMate,
         isDraw: isDraw,
-      });
+      };
+
+      setGameState(newGameState);
+
+      setLegalMoves(getAllLegalMoves(newGameState, nextActiveSide));
 
       return true;
     },
@@ -103,192 +92,6 @@ export function useChessGame() {
     return true;
   }, [gameState]);
 
-  function getPseudoLegalMovesForPiece(
-    state: GameState,
-    square: Square,
-  ): Move[] {
-    const piece = getPieceAtSquare(state.board, square);
-    if (!piece) return [];
-
-    const moves: Move[] = [];
-
-    const [N, E, S, W] = [-10, 1, 10, -1];
-    const allDirections = {
-      n: [
-        N + N + E,
-        E + E + N,
-        E + E + S,
-        S + S + E,
-        S + S + W,
-        W + W + S,
-        W + W + N,
-        N + N + W,
-      ],
-      b: [N + E, S + E, S + W, N + W],
-      r: [N, E, S, W],
-      q: [N, N + E, E, S + E, S, S + W, W, N + W],
-      k: [N, N + E, E, S + E, S, S + W, W, N + W],
-    } as Record<PieceType, number[]>;
-
-    // for the first round of move generation, just naively create every move for every piece
-    // handle the special cases (pawns, castling, etc) later
-    const pieceDirections = allDirections[piece.pieceType];
-    switch (piece.pieceType) {
-      case PAWN: {
-        const pawnAttacks = [N + E, N + W];
-        const promotionPieces = [KNIGHT, BISHOP, ROOK, QUEEN];
-
-        // handle pawn attacks
-        pawnAttacks.forEach((attack) => {
-          const offset = state.activeSide === WHITE ? attack : attack * -1;
-          const toIndex = squareToMailboxIndex(square) + offset;
-          const targetSquare = mailboxIndexToSquare(toIndex);
-
-          // we need to know whether the target is valid because pawns can only move diagonally when attacking
-          const target = getPieceAtSquare(state.board, targetSquare);
-          const validTarget = target && target.color !== state.activeSide;
-
-          // only make the attack move if the target piece is the opposite color OR if the
-          // target square is the en passant square
-          if (
-            isValidDestination(state.board, square, offset, state.activeSide) &&
-            (validTarget || state.epSquare === targetSquare)
-          ) {
-            if (isLastRank(square, state.activeSide)) {
-              promotionPieces.forEach((promotion) => {
-                moves.push({
-                  from: square,
-                  to: targetSquare,
-                  promotion: promotion,
-                });
-              });
-            } else {
-              moves.push({
-                from: square,
-                to: targetSquare,
-              });
-            }
-          }
-        });
-
-        const pawnDirection = state.activeSide === WHITE ? N : S;
-
-        // handle single pawn push
-        const singlePush = pawnDirection;
-        if (
-          isValidDestination(state.board, square, singlePush, state.activeSide)
-        ) {
-          const toIndex = squareToMailboxIndex(square) + singlePush;
-
-          moves.push({
-            from: square,
-            to: mailboxIndexToSquare(toIndex),
-          });
-        }
-
-        // handle double pawn move
-        const doublePush = singlePush + pawnDirection;
-        if (
-          isPawnStartingRank(square, piece) &&
-          isValidDestination(state.board, square, doublePush, state.activeSide)
-        ) {
-          const toIndex = squareToMailboxIndex(square) + doublePush;
-          moves.push({
-            from: square,
-            to: mailboxIndexToSquare(toIndex),
-          });
-        }
-
-        break;
-      }
-      case KNIGHT:
-      case KING: {
-        pieceDirections.forEach((direction) => {
-          if (
-            isValidDestination(state.board, square, direction, state.activeSide)
-          ) {
-            const toIndex = squareToMailboxIndex(square) + direction;
-            moves.push({
-              from: square,
-              to: mailboxIndexToSquare(toIndex),
-            });
-          }
-        });
-        break;
-      }
-      case BISHOP:
-      case ROOK:
-      case QUEEN: {
-        pieceDirections.forEach((direction) => {
-          let offset = squareToMailboxIndex(square) + direction;
-          while (
-            isValidDestination(state.board, square, offset, state.activeSide)
-          ) {
-            moves.push({
-              from: square,
-              to: mailboxIndexToSquare(offset),
-            });
-
-            offset += direction;
-          }
-        });
-
-        break;
-      }
-    }
-
-    // handle castles separately
-    if (piece.pieceType === KING) {
-      // to do a castle, we need to be sure:
-      //   1. the active side has castle rights
-      //   2. the squares between the rook and king are not under attack
-    }
-
-    return moves;
-  }
-
-  function getAllLegalMoves(board: Board, activeSide: Color): Move[] {
-    const squares = board.reduce((squares, piece, index) => {
-      if (piece && piece.color === activeSide) {
-        squares.push(mailboxIndexToSquare(index));
-      }
-      return squares;
-    }, new Array<Square>());
-
-    const pseudoLegalMoves = squares.reduce((moves, square) => {
-      const pieceMoves = getPseudoLegalMovesForPiece(gameState, square);
-
-      return moves.concat(pieceMoves);
-    }, new Array<Move>());
-
-    return pseudoLegalMoves.reduce((legalMoves, move) => {
-      if (isLegalMove(board, move)) {
-        legalMoves.push(move);
-      }
-
-      return legalMoves;
-    }, new Array<Move>());
-  }
-
-  /**
-   * @remarks
-   * This method is a helper that checks whether a move is legal. A legal move is one that does not
-   * leave the active side's king in check. If the king is in check after the move, it is illegal and
-   * needs to be undone. This will be called on a pseudo-legal move, so there is no need to validate
-   * simple things like whether the piece on the target square is on the same side as the one at the
-   * from square.
-   *
-   * @param board - the current state's board array
-   * @param move  - the move whose legality is being checked
-   *
-   * @return a boolean that says whether the move is legal or not
-   * */
-  function isLegalMove(board: Board, move: Move): boolean {
-    const newBoard = movePiece(board, move.from, move.to);
-
-    return !isKingUnderAttack(newBoard, gameState.activeSide);
-  }
-
   /**
    * @remarks
    * This method is a helper that checks whether a move is available to the active side. It will be used
@@ -300,9 +103,7 @@ export function useChessGame() {
    *
    * @return a boolean that says whether the move is valid or not
    * */
-  function isValidMove(board: Board, move: Move): boolean {
-    const legalMoves = getAllLegalMoves(board, gameState.activeSide);
-
+  function isValidMove(move: Move): boolean {
     return !!legalMoves.find(
       (m) =>
         m.from === move.from &&
@@ -311,24 +112,12 @@ export function useChessGame() {
     );
   }
 
-  function hasNoLegalMoves(board: Board, activeSide: Color): boolean {
-    const allMoves: Move[] = [];
-
-    board.forEach((piece, mailboxIndex) => {
-      if (piece && piece.color == activeSide) {
-        const square = mailboxIndexToSquare(mailboxIndex);
-        const moves = getPseudoLegalMovesForPiece(gameState, square);
-
-        allMoves.concat(moves);
-      }
-    });
-
-    // TODO: this needs to be updated to only include legal moves in all moves
-    return allMoves.length === 0;
+  function hasNoLegalMoves(): boolean {
+    return legalMoves.length === 0;
   }
 
   function isSideInCheck(board: Board, activeSide: Color): boolean {
-    return false;
+    return isKingUnderAttack(board, activeSide);
   }
 
   function isInsufficientMaterial(board: Board): boolean {
@@ -346,5 +135,6 @@ export function useChessGame() {
     gameState,
     applyMove,
     isValidMove,
+    legalMoves,
   };
 }

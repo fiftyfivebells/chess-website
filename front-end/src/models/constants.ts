@@ -1,4 +1,4 @@
-import { createBoardFromFen } from "../utils/Board";
+import { createBoardFromFen, getAllLegalMoves } from "../utils/Board";
 import { Color, GameState, PieceType } from "./types";
 
 export const WHITE: Color = "white";
@@ -14,17 +14,20 @@ export const KING: PieceType = "k";
 export const INITIAL_STATE_FEN =
   "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0";
 
+// cardinal directions to be used for navigating the board
+export const [N, E, S, W] = [-10, 1, 10, -1];
+
 export const INITIAL_GAME_STATE = {
   board: createBoardFromFen(INITIAL_STATE_FEN),
   activeSide: WHITE,
   fullMoveCount: 1,
   rule50: 0,
   history: [] as GameState[],
+
   isCheck: false,
   isCheckmate: false,
   isStalemate: false,
   isDraw: false,
 };
 
-// cardinal directions to be used for navigating the board
-export const [N, E, S, W] = [-10, 1, 10, -1];
+export const INITIAL_STATE_MOVES = getAllLegalMoves(INITIAL_GAME_STATE, WHITE);
