@@ -265,7 +265,7 @@ export function isSquareUnderAttack(
 ): boolean {
   return (
     pawnAttacksSquare(board, square, activeSide) ||
-    knightAttacksSquare(board, square, activeSide) ||
+    leaperAttacksSquare(board, square, activeSide) ||
     diagonalPieceAttacksSquare(board, square, activeSide) ||
     straightPieceAttacksSquare(board, square, activeSide)
   );
@@ -296,33 +296,46 @@ function pawnAttacksSquare(
   return doesAttack;
 }
 
-function knightAttacksSquare(
+function leaperAttacksSquare(
   board: Board,
   square: Square,
   activeSide: Color,
 ): boolean {
-  const knightDirections = [
-    N + N + E,
-    E + E + N,
-    E + E + S,
-    S + S + E,
-    S + S + W,
-    W + W + S,
-    W + W + N,
-    N + N + W,
-  ];
+  const directions: Record<PieceType, number[]> = {
+    n: [
+      N + N + E,
+      E + E + N,
+      E + E + S,
+      S + S + E,
+      S + S + W,
+      W + W + S,
+      W + W + N,
+      N + N + W,
+    ],
+    k: [N, N + E, E, S + E, S, S + W, W, N + W],
+  };
+  const leapers = [KNIGHT, KING];
 
   const enemyColor = activeSide === WHITE ? BLACK : WHITE;
   const mailboxIndex = squareToMailboxIndex(square);
 
-  const doesAttack = knightDirections.reduce((acc, direction) => {
-    const target = board[mailboxIndex + direction];
+  const doesAttack = leapers.reduce((acc, leaper) => {
+    const leaperDirections = directions[leaper];
+    return (
+      acc ||
+      leaperDirections.reduce((acc, direction) => {
+        const target = board[mailboxIndex + direction];
+        if (
+          target &&
+          target.color === enemyColor &&
+          target.pieceType === KNIGHT
+        ) {
+          return acc || true;
+        }
 
-    if (target && target.color === enemyColor && target.pieceType === KNIGHT) {
-      return acc || true;
-    }
-
-    return acc;
+        return acc;
+      }, false)
+    );
   }, false);
 
   return doesAttack;
@@ -334,7 +347,7 @@ function diagonalPieceAttacksSquare(
   activeSide: Color,
 ): boolean {
   const diagonals = [N + E, S + E, S + W, N + W];
-  const diagonalPieces = new Set<PieceType>([BISHOP, QUEEN, KING]);
+  const diagonalPieces = new Set<PieceType>([BISHOP, QUEEN]);
 
   return pieceAttacksSquareInDirection(
     board,
@@ -351,7 +364,7 @@ function straightPieceAttacksSquare(
   activeSide: Color,
 ): boolean {
   const straights = [N, E, S, W];
-  const straightPieces = new Set<PieceType>([ROOK, QUEEN, KING]);
+  const straightPieces = new Set<PieceType>([ROOK, QUEEN]);
 
   return pieceAttacksSquareInDirection(
     board,
@@ -618,7 +631,7 @@ export function getAllLegalMoves(
  * */
 function isLegalMove(board: Board, move: Move, activeSide: Color): boolean {
   const newBoard = movePiece(board, move.from, move.to);
-
+  if (move.from === "e7" && move.to === "d6") printBoard(newBoard);
   return !isKingUnderAttack(newBoard, activeSide);
 }
 

@@ -30,7 +30,7 @@ export function useChessGame() {
         ? { color: activeSide, pieceType: promotion }
         : getPieceAtSquare(board, from);
       const capturedPiece = getPieceAtSquare(board, to);
-      console.log("the moving piece is:", movingPiece);
+
       // update the board
       placeOnSquare(newBoard, from, null);
       placeOnSquare(newBoard, to, movingPiece);
@@ -121,7 +121,6 @@ export function useChessGame() {
     activeSide: Color,
     epSquare: Square | undefined = undefined,
   ): boolean {
-    console.log(getAllLegalMoves(board, activeSide, epSquare));
     return getAllLegalMoves(board, activeSide, epSquare).length === 0;
   }
 
