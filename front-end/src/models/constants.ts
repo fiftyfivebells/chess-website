@@ -1,5 +1,5 @@
 import { createBoardFromFen, getAllLegalMoves } from "../utils/Board";
-import { Color, GameState, PieceType } from "./types";
+import { Color, GameState, GameStatus, PieceType } from "./types";
 
 export const WHITE: Color = "white";
 export const BLACK: Color = "black";
@@ -10,6 +10,12 @@ export const BISHOP: PieceType = "b";
 export const ROOK: PieceType = "r";
 export const QUEEN: PieceType = "q";
 export const KING: PieceType = "k";
+
+export const CHECKMATE: GameStatus = "checkmate";
+export const CHECK: GameStatus = "check";
+export const DRAW: GameStatus = "draw";
+export const STALEMATE: GameStatus = "stalemate";
+export const ACTIVE: GameStatus = "active";
 
 export const INITIAL_STATE_FEN =
   "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 0";
@@ -30,4 +36,7 @@ export const INITIAL_GAME_STATE = {
   isDraw: false,
 };
 
-export const INITIAL_STATE_MOVES = getAllLegalMoves(INITIAL_GAME_STATE, WHITE);
+export const INITIAL_STATE_MOVES = getAllLegalMoves(
+  INITIAL_GAME_STATE.board,
+  WHITE,
+);

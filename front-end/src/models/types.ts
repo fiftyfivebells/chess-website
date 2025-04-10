@@ -63,3 +63,10 @@ export interface GameState {
   isStalemate: boolean;
   isDraw: boolean;
 }
+
+export type GameStatus =
+  | "active"
+  | "stalemate"
+  | "draw"
+  | "check"
+  | "checkmate";
