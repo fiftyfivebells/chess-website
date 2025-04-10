@@ -6,7 +6,7 @@ import {
   PAWN,
   WHITE,
 } from "../models/constants";
-import { Board, Color, GameState, Move } from "../models/types";
+import { Board, Color, GameState, Move, Square } from "../models/types";
 import {
   getAllLegalMoves,
   getBoardFenRep,
@@ -30,7 +30,7 @@ export function useChessGame() {
         ? { color: activeSide, pieceType: promotion }
         : getPieceAtSquare(board, from);
       const capturedPiece = getPieceAtSquare(board, to);
-
+      console.log("the moving piece is:", movingPiece);
       // update the board
       placeOnSquare(newBoard, from, null);
       placeOnSquare(newBoard, to, movingPiece);
@@ -44,7 +44,7 @@ export function useChessGame() {
           : gameState.fullMoveCount;
 
       const nextActiveSide = activeSide === WHITE ? BLACK : WHITE;
-      const opponentNoLegalMoves = hasNoLegalMoves();
+      const opponentNoLegalMoves = hasNoLegalMoves(newBoard, nextActiveSide);
 
       // check for check and checkmate
       const isCheck = isSideInCheck(newBoard, nextActiveSide);
@@ -72,9 +72,13 @@ export function useChessGame() {
       };
 
       setGameState(newGameState);
-
-      setLegalMoves(getAllLegalMoves(newGameState, nextActiveSide));
-
+      setLegalMoves(
+        getAllLegalMoves(
+          newGameState.board,
+          newGameState.activeSide,
+          newGameState.epSquare,
+        ),
+      );
       return true;
     },
     [gameState],
@@ -112,8 +116,13 @@ export function useChessGame() {
     );
   }
 
-  function hasNoLegalMoves(): boolean {
-    return legalMoves.length === 0;
+  function hasNoLegalMoves(
+    board: Board,
+    activeSide: Color,
+    epSquare: Square | undefined = undefined,
+  ): boolean {
+    console.log(getAllLegalMoves(board, activeSide, epSquare));
+    return getAllLegalMoves(board, activeSide, epSquare).length === 0;
   }
 
   function isSideInCheck(board: Board, activeSide: Color): boolean {
