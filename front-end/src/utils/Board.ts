@@ -2,7 +2,6 @@ import {
   A8,
   Board,
   Color,
-  GameState,
   Move,
   Piece,
   PieceType,
@@ -197,17 +196,23 @@ export function isValidDestination(
   offset: number,
   activeSide: Color,
 ): boolean {
-  console.log("in valid destination");
-  //  console.log(`checking square ${start}`);
   const mailboxIndex: number = squareToMailboxIndex(start) + offset;
-  //  console.log("mailbox index is", mailboxIndex);
-  //  console.log("offset is", offset);
   const target: Piece | null = board[mailboxIndex];
-  //  console.log("target piece is", target);
   const square = mailboxIndexToSquare(mailboxIndex);
-  console.log("new square is", square);
 
   return square !== "oob" && (target === null || target.color !== activeSide);
+}
+
+export function isValidPawnMove(
+  board: Board,
+  start: Square,
+  offset: number,
+): boolean {
+  const mailboxIndex: number = squareToMailboxIndex(start) + offset;
+  const target: Piece | null = board[mailboxIndex];
+  const targetSquare: Square = mailboxIndexToSquare(mailboxIndex);
+
+  return targetSquare !== "oob" && target === null;
 }
 
 export function isValidPawnAttack(
@@ -239,9 +244,9 @@ export function isPawnStartingRank(square: Square, piece: Piece): boolean {
 }
 
 export function isLastRank(square: Square, activeSide: Color): boolean {
-  const [rank] = squareToFileRankIndex(square);
+  const [_, rank] = squareToFileRankIndex(square);
 
-  return activeSide === BLACK ? rank === 0 : rank === 7;
+  return activeSide === BLACK ? rank === 7 : rank === 0;
 }
 
 export function isKingUnderAttack(board: Board, activeSide: Color): boolean {
@@ -412,8 +417,13 @@ export function movePiece(board: Board, from: Square, to: Square): Board {
   return newBoard;
 }
 
-function getPseudoLegalMovesForPiece(state: GameState, square: Square): Move[] {
-  const piece = getPieceAtSquare(state.board, square);
+function getPseudoLegalMovesForPiece(
+  board: Board,
+  activeSide: Color,
+  epSquare: Square | undefined,
+  square: Square,
+): Move[] {
+  const piece = getPieceAtSquare(board, square);
   if (!piece) return [];
 
   const moves: Move[] = [];
@@ -446,21 +456,21 @@ function getPseudoLegalMovesForPiece(state: GameState, square: Square): Move[] {
 
       // handle pawn attacks
       pawnAttacks.forEach((attack) => {
-        const offset = state.activeSide === WHITE ? attack : attack * -1;
+        const offset = activeSide === WHITE ? attack : attack * -1;
         const toIndex = squareToMailboxIndex(square) + offset;
         const targetSquare = mailboxIndexToSquare(toIndex);
 
-        // we need to know whether the target is valid because pawns can only move diagonally when attacking
-        const target = getPieceAtSquare(state.board, targetSquare);
-        const validTarget = target && target.color !== state.activeSide;
+        // we need to know whether the target is 6valid because pawns can only move diagonally when attacking
+        const target = getPieceAtSquare(board, targetSquare);
+        const validTarget = target && target.color !== activeSide;
 
         // only make the attack move if the target piece is the opposite color OR if the
         // target square is the en passant square
         if (
-          isValidDestination(state.board, square, offset, state.activeSide) &&
-          (validTarget || state.epSquare === targetSquare)
+          isValidDestination(board, square, offset, activeSide) &&
+          (validTarget || epSquare === targetSquare)
         ) {
-          if (isLastRank(square, state.activeSide)) {
+          if (isLastRank(targetSquare, activeSide)) {
             promotionPieces.forEach((promotion) => {
               moves.push({
                 from: square,
@@ -477,26 +487,35 @@ function getPseudoLegalMovesForPiece(state: GameState, square: Square): Move[] {
         }
       });
 
-      const pawnDirection = state.activeSide === WHITE ? N : S;
+      const pawnDirection = activeSide === WHITE ? N : S;
 
       // handle single pawn push
       const singlePush = pawnDirection;
-      if (
-        isValidDestination(state.board, square, singlePush, state.activeSide)
-      ) {
+      if (isValidPawnMove(board, square, singlePush)) {
         const toIndex = squareToMailboxIndex(square) + singlePush;
+        const destinationSquare = mailboxIndexToSquare(toIndex);
 
-        moves.push({
-          from: square,
-          to: mailboxIndexToSquare(toIndex),
-        });
+        if (isLastRank(destinationSquare, activeSide)) {
+          promotionPieces.forEach((promotion) => {
+            moves.push({
+              from: square,
+              to: destinationSquare,
+              promotion: promotion,
+            });
+          });
+        } else {
+          moves.push({
+            from: square,
+            to: destinationSquare,
+          });
+        }
       }
 
       // handle double pawn move
       const doublePush = singlePush + pawnDirection;
       if (
         isPawnStartingRank(square, piece) &&
-        isValidDestination(state.board, square, doublePush, state.activeSide)
+        isValidPawnMove(board, square, doublePush)
       ) {
         const toIndex = squareToMailboxIndex(square) + doublePush;
         moves.push({
@@ -510,9 +529,7 @@ function getPseudoLegalMovesForPiece(state: GameState, square: Square): Move[] {
     case KNIGHT:
     case KING: {
       pieceDirections.forEach((direction) => {
-        if (
-          isValidDestination(state.board, square, direction, state.activeSide)
-        ) {
+        if (isValidDestination(board, square, direction, activeSide)) {
           const toIndex = squareToMailboxIndex(square) + direction;
           moves.push({
             from: square,
@@ -528,9 +545,7 @@ function getPseudoLegalMovesForPiece(state: GameState, square: Square): Move[] {
       pieceDirections.forEach((direction) => {
         let offset = direction;
         const fromSquareIndex = squareToMailboxIndex(square);
-        while (
-          isValidDestination(state.board, square, offset, state.activeSide)
-        ) {
+        while (isValidDestination(board, square, offset, activeSide)) {
           moves.push({
             from: square,
             to: mailboxIndexToSquare(fromSquareIndex + offset),
@@ -544,7 +559,7 @@ function getPseudoLegalMovesForPiece(state: GameState, square: Square): Move[] {
     }
   }
 
-  // handle castles separately
+  // TODO: handle castles separately
   if (piece.pieceType === KING) {
     // to do a castle, we need to be sure:
     //   1. the active side has castle rights
@@ -555,10 +570,11 @@ function getPseudoLegalMovesForPiece(state: GameState, square: Square): Move[] {
 }
 
 export function getAllLegalMoves(
-  gameState: GameState,
+  board: Board,
   activeSide: Color,
+  epSquare: Square | undefined = undefined,
 ): Move[] {
-  const squares = gameState.board.reduce((squares, piece, index) => {
+  const squares = board.reduce((squares, piece, index) => {
     if (piece && piece.color === activeSide) {
       squares.push(mailboxIndexToSquare(index));
     }
@@ -566,13 +582,18 @@ export function getAllLegalMoves(
   }, new Array<Square>());
 
   const pseudoLegalMoves = squares.reduce((moves, square) => {
-    const pieceMoves = getPseudoLegalMovesForPiece(gameState, square);
+    const pieceMoves = getPseudoLegalMovesForPiece(
+      board,
+      activeSide,
+      epSquare,
+      square,
+    );
 
     return moves.concat(pieceMoves);
   }, new Array<Move>());
 
   const legalMoves = pseudoLegalMoves.reduce((legalMoves, move) => {
-    if (isLegalMove(gameState.board, move, activeSide)) {
+    if (isLegalMove(board, move, activeSide)) {
       legalMoves.push(move);
     }
 
