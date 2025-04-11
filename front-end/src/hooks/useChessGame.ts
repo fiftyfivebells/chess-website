@@ -3,14 +3,24 @@ import {
   BLACK,
   INITIAL_GAME_STATE,
   INITIAL_STATE_MOVES,
+  KING,
   PAWN,
+  ROOK,
   WHITE,
 } from "../models/constants";
-import { Board, Color, GameState, Move, Square } from "../models/types";
+import {
+  Board,
+  CastleRights,
+  Color,
+  GameState,
+  Move,
+  Square,
+} from "../models/types";
 import {
   getAllLegalMoves,
   getBoardFenRep,
   getPieceAtSquare,
+  handleCastleMove,
   isKingUnderAttack,
   placeOnSquare,
 } from "../utils/Board";
@@ -34,6 +44,20 @@ export function useChessGame() {
       // update the board
       placeOnSquare(newBoard, from, null);
       placeOnSquare(newBoard, to, movingPiece);
+
+      // handle the castles
+      if (moveIsCastle(activeSide, move)) {
+        handleCastleMove(newBoard, move, activeSide);
+      }
+
+      const newCastleRights = gameState.castleRights
+        ? updateCastleRights(
+            gameState.board,
+            gameState.activeSide,
+            move,
+            gameState.castleRights,
+          )
+        : undefined;
 
       const newWhiteCaptured =
         capturedPiece && capturedPiece.color === WHITE
@@ -69,7 +93,7 @@ export function useChessGame() {
         board: newBoard,
         activeSide: nextActiveSide,
         epSquare: undefined,
-        castleRights: undefined,
+        castleRights: newCastleRights,
         fullMoveCount: newFullMoveCount,
         rule50: newRule50,
 
@@ -87,6 +111,7 @@ export function useChessGame() {
         getAllLegalMoves(
           newGameState.board,
           newGameState.activeSide,
+          newGameState.castleRights,
           newGameState.epSquare,
         ),
       );
@@ -94,6 +119,43 @@ export function useChessGame() {
     },
     [gameState],
   );
+
+  function moveIsCastle(activeSide: Color, move: Move): boolean {
+    const kingSquare = activeSide === WHITE ? "e1" : "e8";
+    const validDestination =
+      activeSide === WHITE
+        ? move.to === "g1" || move.to === "c1"
+        : move.to === "g8" || move.to === "c8";
+
+    return kingSquare && validDestination;
+  }
+
+  function updateCastleRights(
+    board: Board,
+    activeSide: Color,
+    move: Move,
+    oldCastleRights: CastleRights,
+  ): CastleRights {
+    // if king moved, take away all rights
+    // if rook moved, take away rights for that side
+    const { ...newCastleRights } = oldCastleRights;
+    const kingSideRook = activeSide === WHITE ? "h1" : "h8";
+    const queenSideRook = activeSide === BLACK ? "a1" : "a8";
+
+    const movingPiece = getPieceAtSquare(board, move.from);
+    if (movingPiece?.pieceType === KING) {
+      newCastleRights[activeSide].kingSide = false;
+      newCastleRights[activeSide].queenSide = false;
+    }
+
+    if (movingPiece?.pieceType === ROOK && move.from === kingSideRook)
+      newCastleRights[activeSide].kingSide = false;
+
+    if (movingPiece?.pieceType === ROOK && move.from === queenSideRook)
+      newCastleRights[activeSide].queenSide = false;
+
+    return newCastleRights;
+  }
 
   const unApplyPreviousMove = useCallback((): boolean => {
     const newHistory = [...gameState.history];
@@ -130,9 +192,12 @@ export function useChessGame() {
   function hasNoLegalMoves(
     board: Board,
     activeSide: Color,
-    epSquare: Square | undefined = undefined,
+    castleRights?: CastleRights,
+    epSquare?: Square,
   ): boolean {
-    return getAllLegalMoves(board, activeSide, epSquare).length === 0;
+    return (
+      getAllLegalMoves(board, activeSide, castleRights, epSquare).length === 0
+    );
   }
 
   function isSideInCheck(board: Board, activeSide: Color): boolean {

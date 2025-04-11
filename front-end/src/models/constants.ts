@@ -27,11 +27,11 @@ export const INITIAL_GAME_STATE = {
   board: createBoardFromFen(INITIAL_STATE_FEN),
   activeSide: WHITE,
   castleRights: {
-    WHITE: {
+    white: {
       kingSide: true,
       queenSide: true,
     },
-    BLACK: {
+    black: {
       kingSide: true,
       queenSide: true,
     },
@@ -51,4 +51,5 @@ export const INITIAL_GAME_STATE = {
 export const INITIAL_STATE_MOVES = getAllLegalMoves(
   INITIAL_GAME_STATE.board,
   WHITE,
+  INITIAL_GAME_STATE.castleRights,
 );

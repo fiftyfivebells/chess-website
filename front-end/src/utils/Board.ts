@@ -1,6 +1,7 @@
 import {
   A8,
   Board,
+  CastleRights,
   Color,
   Move,
   Piece,
@@ -186,6 +187,35 @@ export function placeOnSquare(
   const mailboxIndex = squareToMailboxIndex(square);
 
   board[mailboxIndex] = piece;
+}
+
+export function handleCastleMove(board: Board, move: Move, activeSide: Color) {
+  const rookDestination = {
+    white: ["f1", "d1"],
+    black: ["f8", "d8"],
+  };
+
+  const rookOrigin = {
+    white: ["h1", "a1"],
+    black: ["h8", "a8"],
+  };
+
+  const piece = {
+    pieceType: ROOK,
+    color: activeSide,
+  };
+
+  const [kingSide, queenSide] = [0, 1];
+  const isKingSide = activeSide === WHITE ? move.to === "g1" : move.to === "g8";
+
+  // prettier-ignore
+  if (isKingSide) {
+    placeOnSquare(board, rookDestination[activeSide][kingSide] as Square, piece)
+    placeOnSquare(board, rookOrigin[activeSide][kingSide] as Square, null)
+  } else {
+    placeOnSquare(board, rookDestination[activeSide][queenSide] as Square, piece)
+    placeOnSquare(board, rookOrigin[activeSide][queenSide] as Square, null)
+  }
 }
 
 export function isValidDestination(
@@ -431,8 +461,9 @@ export function movePiece(board: Board, from: Square, to: Square): Board {
 function getPseudoLegalMovesForPiece(
   board: Board,
   activeSide: Color,
-  epSquare: Square | undefined,
   square: Square,
+  castleRights?: CastleRights,
+  epSquare?: Square,
 ): Move[] {
   const piece = getPieceAtSquare(board, square);
   if (!piece) return [];
@@ -570,11 +601,51 @@ function getPseudoLegalMovesForPiece(
     }
   }
 
-  // TODO: handle castles separately
-  if (piece.pieceType === KING) {
-    // to do a castle, we need to be sure:
-    //   1. the active side has castle rights
-    //   2. the squares between the rook and king are not under attack
+  const hasCastleRights =
+    castleRights &&
+    (castleRights[activeSide].kingSide || castleRights[activeSide].queenSide);
+
+  // handle castles separately
+  if (hasCastleRights && piece.pieceType === KING) {
+    const squares = {
+      white: {
+        kingSide: ["f1", "g1"],
+        queenSide: ["b1", "c1", "d1"],
+      },
+      black: {
+        kingSide: ["f8", "g8"],
+        queenSide: ["b8", "c8", "d8"],
+      },
+    };
+
+    const activeSideSquares = squares[activeSide];
+
+    const checkSquareCastleEligibility = (
+      board: Board,
+      square: Square,
+      activeSide: Color,
+    ): boolean => {
+      return !(
+        getPieceAtSquare(board, square) ||
+        isSquareUnderAttack(board, square, activeSide)
+      );
+    };
+
+    // prettier-ignore
+    if (activeSideSquares.kingSide.every(sq => checkSquareCastleEligibility(board, sq as Square, activeSide))) {
+      moves.push({
+        from: square,
+        to: activeSideSquares.kingSide[1] as Square
+      })
+    }
+
+    // prettier-ignore
+    if (activeSideSquares.queenSide.every(sq => checkSquareCastleEligibility(board, sq as Square, activeSide))) {
+      moves.push({
+        from: square,
+        to: activeSideSquares.queenSide[2] as Square
+      })
+    }
   }
 
   return moves;
@@ -583,7 +654,8 @@ function getPseudoLegalMovesForPiece(
 export function getAllLegalMoves(
   board: Board,
   activeSide: Color,
-  epSquare: Square | undefined = undefined,
+  castleRights?: CastleRights,
+  epSquare?: Square,
 ): Move[] {
   const squares = board.reduce((squares, piece, index) => {
     if (piece && piece.color === activeSide) {
@@ -596,8 +668,9 @@ export function getAllLegalMoves(
     const pieceMoves = getPseudoLegalMovesForPiece(
       board,
       activeSide,
-      epSquare,
       square,
+      castleRights,
+      epSquare,
     );
 
     return moves.concat(pieceMoves);
