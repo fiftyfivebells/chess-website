@@ -1,7 +1,7 @@
 import { Chip, Paper, Typography } from "@mui/material";
-import { Color, GameStatus } from "../models/types";
 import { Box } from "@mui/system";
 import { BLACK, WHITE } from "../models/constants";
+import { Color, GameStatus } from "../models/types";
 
 interface ChessGameInfoProps {
   activeSide: Color;

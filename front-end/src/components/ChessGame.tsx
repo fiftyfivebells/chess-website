@@ -1,17 +1,16 @@
-import { Container, Grid } from "@mui/material";
+import { Box, Grid, Paper, useMediaQuery, useTheme } from "@mui/material";
 import { Chessboard } from "react-chessboard";
 import { useChessContext } from "../context/ChessGameContext";
+import { ACTIVE, CHECK, CHECKMATE, DRAW, STALEMATE } from "../models/constants";
 import { GameStatus, PieceType, Square } from "../models/types";
 import { getBoardFenRep, getPieceAtSquare } from "../utils/Board";
-import { ChessGameInfo } from "./ChessGameInfo";
-import { ACTIVE, CHECK, CHECKMATE, DRAW, STALEMATE } from "../models/constants";
 import { CapturedPieces } from "./CapturedPieces";
+import { ChessGameInfo } from "./ChessGameInfo";
 
 export default function ChessGame() {
   const { gameState, isValidMove, applyMove } = useChessContext();
-  //("rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQk - 3 1");
-
-  //  printBoard(gameState.board);
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("md"));
 
   function getGameStatus(): GameStatus {
     if (gameState.isCheckmate) return CHECKMATE;
@@ -40,7 +39,6 @@ export default function ChessGame() {
       promotion: promotionPiece,
     };
 
-    console.log(move);
     if (isValidMove(move)) {
       return applyMove(move);
     }
@@ -48,64 +46,81 @@ export default function ChessGame() {
     return false;
   }
 
+  const capturedPiecesOrder = isSmallScreen ? 3 : 1;
+  const boardOrder = isSmallScreen ? 1 : 2;
+  const chessGameInfoOrder = isSmallScreen ? 2 : 3;
+
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 3 }}>
-          <CapturedPieces whiteCaptured={[]} blackCaptured={[]} />
+    <Box
+      sx={{
+        flexGrow: 1,
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+      }}
+    >
+      <Grid
+        container
+        spacing={2}
+        alignItems="center"
+        justifyContent="center"
+        sx={{ width: "100%", maxWidth: "1600px" }}
+      >
+        {/* Captured Pieces (Left or Third on Small Screen) */}
+        <Grid size={{ xs: 12, md: 2 }} order={capturedPiecesOrder}>
+          <Paper elevation={1} sx={{ padding: 1 }}>
+            <CapturedPieces
+              whiteCaptured={gameState.whiteCaptured}
+              blackCaptured={gameState.blackCaptured}
+            />
+          </Paper>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 3 }}>
-          <Chessboard
-            position={getBoardFenRep(gameState.board)}
-            onPieceDrop={onDrop}
-          />
+        {/* Chessboard (Middle or First on Small Screen) */}
+        <Grid
+          size={{ xs: 12, md: 8 }}
+          order={boardOrder}
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            maxHeight: "90vh",
+          }} // Center board
+        >
+          {/* Ensure the board itself is responsive within its container */}
+          {/* react-chessboard usually handles its own sizing well based on container width */}
+          <Box sx={{ width: "100%", maxWidth: "70vh", aspectRatio: "1 / 1" }}>
+            {/* Control max size & aspect ratio */}
+            <Paper elevation={1} sx={{ padding: 1 }}>
+              <Chessboard
+                position={getBoardFenRep(gameState.board)}
+                onPieceDrop={onDrop}
+                // Add other props as needed: arePiecesDraggable, custom pieces, etc.
+              />
+            </Paper>
+          </Box>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 3 }}>
-          <ChessGameInfo
-            activeSide={gameState.activeSide}
-            gameStatus={getGameStatus()}
-            whiteTime={10}
-            blackTime={10}
-            paused={false}
-          />
+        {/* Game Info (Right or Second on Small Screen) */}
+        <Grid
+          size={{ xs: 12, md: 2 }}
+          order={chessGameInfoOrder}
+          sx={{ height: false ? "auto" : "80%" }} // Adjust height
+        >
+          <Paper
+            elevation={1}
+            sx={{ padding: 1, minHeight: "25%", minWidth: "300px" }}
+          >
+            <ChessGameInfo
+              activeSide={gameState.activeSide}
+              gameStatus={getGameStatus()}
+              whiteTime={10}
+              blackTime={10}
+              paused={false}
+            />
+          </Paper>
         </Grid>
       </Grid>
-    </Container>
+    </Box>
   );
-
-  /* return (
-   *   <>
-   *     <Box sx={{ flexGrow: 1, p: 2, maxWidth: 1000, margin: "auto" }}>
-   *       <Grid container spacing={2} alignItems="center" justifyContent="center">
-   *         <Grid size={{ xs: 12, md: 6, lg: 8 }}>
-   *           <Box
-   *             sx={{
-   *               width: "100%", // Take full width of the Grid item
-   *               maxWidth: 700, // Max size for the board container itself
-   *               margin: "auto", // Center the Box if Grid item is wider
-   *               aspectRatio: "1 / 1", // Maintain square shape for the board area
-   *               position: "relative", // Needed if using absolute positioning inside
-   *             }}
-   *           >
-   *             <Chessboard
-   *               position={getBoardFenRep(gameState.board)}
-   *               onPieceDrop={onDrop}
-   *             />
-   *           </Box>
-   *         </Grid>
-   *         <Grid size={4}>
-   *           <ChessGameInfo
-   *             activeColor={gameState.activeSide}
-   *             gameStatus={getGameStatus()}
-   *             whiteTime={10}
-   *             blackTime={10}
-   *             paused={false}
-   *           />
-   *         </Grid>
-   *       </Grid>
-   *     </Box>
-   *   </>
-   * ); */
 }
