@@ -702,7 +702,6 @@ export function getAllLegalMoves(
  * */
 function isLegalMove(board: Board, move: Move, activeSide: Color): boolean {
   const newBoard = movePiece(board, move.from, move.to);
-  if (move.from === "e7" && move.to === "d6") printBoard(newBoard);
   return !isKingUnderAttack(newBoard, activeSide);
 }
 

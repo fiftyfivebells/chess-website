@@ -4,8 +4,10 @@ import {
   INITIAL_GAME_STATE,
   INITIAL_STATE_MOVES,
   KING,
+  N,
   PAWN,
   ROOK,
+  S,
   WHITE,
 } from "../models/constants";
 import {
@@ -14,6 +16,7 @@ import {
   Color,
   GameState,
   Move,
+  Piece,
   Square,
 } from "../models/types";
 import {
@@ -22,7 +25,9 @@ import {
   getPieceAtSquare,
   handleCastleMove,
   isKingUnderAttack,
+  mailboxIndexToSquare,
   placeOnSquare,
+  squareToMailboxIndex,
 } from "../utils/Board";
 
 export function useChessGame() {
@@ -32,18 +37,42 @@ export function useChessGame() {
   const applyMove = useCallback(
     (move: Move): boolean => {
       const { from, to, promotion } = move;
-      const { board, activeSide, history } = gameState;
+      const { board, epSquare, activeSide, history } = gameState;
 
       // create new board for after the move
       const newBoard = [...board];
       const movingPiece = promotion
         ? { color: activeSide, pieceType: promotion }
         : getPieceAtSquare(board, from);
-      const capturedPiece = getPieceAtSquare(board, to);
+      const capturedPiece =
+        movingPiece?.pieceType === PAWN && move.to === epSquare
+          ? {
+              pieceType: PAWN,
+              color: activeSide === WHITE ? BLACK : WHITE,
+            }
+          : getPieceAtSquare(board, to);
 
       // update the board
       placeOnSquare(newBoard, from, null);
       placeOnSquare(newBoard, to, movingPiece);
+
+      // handle setting the en passant square
+      let newEpSquare;
+      if (movingPiece && moveTriggersEPSquare(movingPiece, move)) {
+        const fromIndex = squareToMailboxIndex(move.from);
+        const epSquareIndex =
+          activeSide === WHITE ? fromIndex + N : fromIndex + S;
+
+        newEpSquare = mailboxIndexToSquare(epSquareIndex);
+      }
+
+      // handle an en passant capture
+      if (move.to === epSquare) {
+        const toIndex = squareToMailboxIndex(move.to);
+        const epTarget = activeSide === WHITE ? toIndex + S : toIndex + N;
+
+        placeOnSquare(newBoard, mailboxIndexToSquare(epTarget), null);
+      }
 
       // handle the castles
       if (moveIsCastle(activeSide, move)) {
@@ -59,6 +88,7 @@ export function useChessGame() {
           )
         : undefined;
 
+      // add captured pieces to the lists
       const newWhiteCaptured =
         capturedPiece && capturedPiece.color === WHITE
           ? [...gameState.whiteCaptured, capturedPiece]
@@ -70,7 +100,9 @@ export function useChessGame() {
 
       // update the move counts
       const newRule50 =
-        movingPiece?.pieceType === PAWN || capturedPiece ? 0 : gameState.rule50;
+        movingPiece?.pieceType === PAWN || capturedPiece
+          ? 0
+          : gameState.rule50 + 1;
       const newFullMoveCount =
         activeSide === BLACK
           ? gameState.fullMoveCount + 1
@@ -92,7 +124,7 @@ export function useChessGame() {
       const newGameState: GameState = {
         board: newBoard,
         activeSide: nextActiveSide,
-        epSquare: undefined,
+        epSquare: newEpSquare,
         castleRights: newCastleRights,
         fullMoveCount: newFullMoveCount,
         rule50: newRule50,
@@ -119,6 +151,16 @@ export function useChessGame() {
     },
     [gameState],
   );
+
+  function moveTriggersEPSquare(movedPiece: Piece, move: Move): boolean {
+    const isPawn = movedPiece.pieceType === PAWN;
+    const isDoublePush =
+      Math.abs(
+        squareToMailboxIndex(move.to) - squareToMailboxIndex(move.from),
+      ) == 20;
+
+    return isPawn && isDoublePush;
+  }
 
   function moveIsCastle(activeSide: Color, move: Move): boolean {
     const kingSquare = activeSide === WHITE ? "e1" : "e8";
@@ -208,17 +250,34 @@ export function useChessGame() {
     return false;
   }
 
-  const getFen = useCallback(
-    (board: Board) => {
-      return getBoardFenRep(board);
-    },
-    [gameState],
-  );
+  function getCastleRightsString(castleRights: CastleRights): string {
+    const castleRightsArray: string[] = [];
+
+    if (castleRights.white.kingSide) castleRightsArray.push("K");
+    if (castleRights.white.queenSide) castleRightsArray.push("Q");
+    if (castleRights.black.kingSide) castleRightsArray.push("k");
+    if (castleRights.black.queenSide) castleRightsArray.push("q");
+
+    return castleRightsArray.join("");
+  }
+
+  const getFen = useCallback(() => {
+    const boardFen = getBoardFenRep(gameState.board);
+    const color = gameState.activeSide[0];
+    const castleRights = gameState.castleRights
+      ? getCastleRightsString(gameState.castleRights)
+      : "-";
+    const epSquare = gameState.epSquare ? gameState.epSquare : "-";
+    const rule50 = gameState.rule50;
+    const fullMove = gameState.fullMoveCount;
+
+    return `${boardFen} ${color} ${castleRights} ${epSquare} ${rule50} ${fullMove}`;
+  }, [gameState]);
 
   return {
     gameState,
     applyMove,
     isValidMove,
-    legalMoves,
+    getFen,
   };
 }

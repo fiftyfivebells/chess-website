@@ -6,6 +6,7 @@ interface ChessGameContextType {
   gameState: GameState;
   applyMove: (move: Move) => boolean;
   isValidMove: (move: Move) => boolean;
+  getFen: () => void;
 }
 
 const ChessGameContext = createContext<ChessGameContextType | undefined>(
