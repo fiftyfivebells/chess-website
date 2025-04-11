@@ -148,8 +148,6 @@ export function getBoardFenRep(mailbox: Board): string {
           };
         }
 
-        //        if (blanks === 7 && !piece) return { rowString: "8", blanks: 8 };
-
         if (!piece) return { rowString: rowString, blanks: blanks + 1 };
 
         const totalBlanks: string = blanks > 0 ? `${blanks}` : "";

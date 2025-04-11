@@ -49,13 +49,26 @@ export interface Move {
   promotion?: PieceType;
 }
 
+export type CastleRights = {
+  white: {
+    kingSide: boolean;
+    queenSide: boolean;
+  };
+  black: {
+    kingSide: boolean;
+    queenSide: boolean;
+  };
+};
+
 export interface GameState {
   board: Board;
   activeSide: Color;
   epSquare?: Square;
-  castleRights?: string;
+  castleRights?: CastleRights;
   fullMoveCount: number;
   rule50: number;
+  whiteCaptured: Piece[];
+  blackCaptured: Piece[];
 
   history: GameState[];
   isCheck: boolean;

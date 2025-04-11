@@ -35,6 +35,15 @@ export function useChessGame() {
       placeOnSquare(newBoard, from, null);
       placeOnSquare(newBoard, to, movingPiece);
 
+      const newWhiteCaptured =
+        capturedPiece && capturedPiece.color === WHITE
+          ? [...gameState.whiteCaptured, capturedPiece]
+          : [...gameState.whiteCaptured];
+      const newBlackCaptured =
+        capturedPiece && capturedPiece.color === BLACK
+          ? [...gameState.blackCaptured, capturedPiece]
+          : [...gameState.blackCaptured];
+
       // update the move counts
       const newRule50 =
         movingPiece?.pieceType === PAWN || capturedPiece ? 0 : gameState.rule50;
@@ -64,6 +73,8 @@ export function useChessGame() {
         fullMoveCount: newFullMoveCount,
         rule50: newRule50,
 
+        whiteCaptured: newWhiteCaptured,
+        blackCaptured: newBlackCaptured,
         history: [...history, gameState],
         isCheck: isCheck,
         isCheckmate: isCheckMate,

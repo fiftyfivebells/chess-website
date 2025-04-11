@@ -1,5 +1,5 @@
 import { createBoardFromFen, getAllLegalMoves } from "../utils/Board";
-import { Color, GameState, GameStatus, PieceType } from "./types";
+import { Color, GameState, GameStatus, Piece, PieceType } from "./types";
 
 export const WHITE: Color = "white";
 export const BLACK: Color = "black";
@@ -26,9 +26,21 @@ export const [N, E, S, W] = [-10, 1, 10, -1];
 export const INITIAL_GAME_STATE = {
   board: createBoardFromFen(INITIAL_STATE_FEN),
   activeSide: WHITE,
+  castleRights: {
+    WHITE: {
+      kingSide: true,
+      queenSide: true,
+    },
+    BLACK: {
+      kingSide: true,
+      queenSide: true,
+    },
+  },
   fullMoveCount: 1,
   rule50: 0,
   history: [] as GameState[],
+  whiteCaptured: [] as Piece[],
+  blackCaptured: [] as Piece[],
 
   isCheck: false,
   isCheckmate: false,
