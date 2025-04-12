@@ -356,7 +356,7 @@ function leaperAttacksSquare(
         if (
           target &&
           target.color === enemyColor &&
-          target.pieceType === KNIGHT
+          target.pieceType === leaper
         ) {
           return acc || true;
         }
