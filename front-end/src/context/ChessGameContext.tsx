@@ -6,6 +6,7 @@ interface ChessGameContextType {
   gameState: GameState;
   isGameActive: boolean;
   isPaused: boolean;
+  timers: { white: number; black: number };
   applyMove: (move: Move) => boolean;
   isValidMove: (move: Move) => boolean;
   getFen: () => string;

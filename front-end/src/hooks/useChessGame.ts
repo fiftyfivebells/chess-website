@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   BLACK,
   INITIAL_GAME_STATE,
@@ -33,6 +33,10 @@ import {
 
 export function useChessGame() {
   const [gameState, setGameState] = useState<GameState>(INITIAL_GAME_STATE);
+  const [timers, setTimers] = useState<{ white: number; black: number }>({
+    white: 0,
+    black: 0,
+  });
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [isGameActive, setIsGameActive] = useState<boolean>(false);
   const [legalMoves, setLegalMoves] = useState<Move[]>(INITIAL_STATE_MOVES);
@@ -143,8 +147,16 @@ export function useChessGame() {
         isDraw: isDraw,
 
         config: gameState.config,
-        isPaused: false,
       };
+
+      // handle incrementing the time if necessary
+      const increment = gameState.config.timeControl.increment;
+      if (increment > 0) {
+        setTimers((prev) => ({
+          ...prev,
+          [activeSide]: prev[activeSide] + increment,
+        }));
+      }
 
       setGameState(newGameState);
       setLegalMoves(
@@ -155,9 +167,10 @@ export function useChessGame() {
           newGameState.epSquare,
         ),
       );
+
       return true;
     },
-    [gameState],
+    [gameState, timers],
   );
 
   function moveTriggersEPSquare(movedPiece: Piece, move: Move): boolean {
@@ -255,6 +268,7 @@ export function useChessGame() {
     return isKingUnderAttack(board, activeSide);
   }
 
+  // TODO: needs an implementation
   function isInsufficientMaterial(board: Board): boolean {
     return false;
   }
@@ -288,6 +302,9 @@ export function useChessGame() {
 
     newGameState.config = config;
 
+    const initialTime = config.timeControl.initialTime;
+    setTimers({ white: initialTime * 60, black: initialTime * 60 });
+
     setIsGameActive(true);
     setGameState(newGameState);
   }
@@ -295,11 +312,53 @@ export function useChessGame() {
   function resetGame(): void {
     setIsGameActive(false);
     setGameState(INITIAL_GAME_STATE);
+    setLegalMoves(INITIAL_STATE_MOVES);
+    setTimers({ white: 0, black: 0 });
   }
 
   function togglePaused(): void {
     setIsPaused(!isPaused);
   }
+
+  // Timer Logic
+  useEffect(() => {
+    if (!isGameActive || isPaused) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setTimers((prevTimers) => {
+        const activeSide = gameState.activeSide;
+        const currentTime = prevTimers[activeSide];
+
+        // if time is already zero or less, shouldn't happen if checked below, but safety check
+        if (currentTime <= 0) {
+          return prevTimers;
+        }
+
+        const newTime = currentTime - 1;
+
+        if (newTime <= 0) {
+          setIsGameActive(false);
+
+          // TODO: should I add a game over state? I would set the time out loss here
+          // return timers with 0 for the timed-out player
+          return { ...prevTimers, [activeSide]: 0 };
+        }
+
+        // otherwise return the decremented time
+        return { ...prevTimers, [activeSide]: newTime };
+      });
+    }, 1000); // decrement every 1000ms (1 second)
+
+    return () => {
+      clearInterval(intervalId); // stop the interval
+    };
+  }, [
+    isGameActive,
+    isPaused,
+    gameState.activeSide, // re-run when turn changes (to time the correct player)
+  ]);
 
   return {
     gameState,
@@ -311,5 +370,6 @@ export function useChessGame() {
     togglePaused,
     isPaused,
     isGameActive,
+    timers,
   };
 }
