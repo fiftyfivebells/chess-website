@@ -61,8 +61,8 @@ export type CastleRights = {
 };
 
 export interface TimeControl {
-  minutes: number;
-  seconds: number;
+  initialTime: number;
+  increment: number;
 }
 
 export type EngineName = "go" | "stockfish";

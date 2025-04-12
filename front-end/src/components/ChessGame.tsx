@@ -56,30 +56,31 @@ const engineOptions = {
 const defaultEngine: EngineName = STOCKFISH.name;
 
 const timeControlOptions = {
-  bullet10: { minutes: 1, seconds: 0 },
-  bullet21: { minutes: 2, seconds: 1 },
-  blitz30: { minutes: 3, seconds: 0 },
-  blitz32: { minutes: 3, seconds: 2 },
-  blitz50: { minutes: 5, seconds: 0 },
-  blitz53: { minutes: 5, seconds: 3 },
-  rapid100: { minutes: 10, seconds: 0 },
-  rapid105: { minutes: 10, seconds: 5 },
-  rapid1510: { minutes: 15, seconds: 10 },
-  classical300: { minutes: 30, seconds: 0 },
-  classical3020: { minutes: 30, seconds: 20 },
+  bullet10: { initialTime: 1, increment: 0 },
+  bullet21: { initialTime: 2, increment: 1 },
+  blitz30: { initialTime: 3, increment: 0 },
+  blitz32: { initialTime: 3, increment: 2 },
+  blitz50: { initialTime: 5, increment: 0 },
+  blitz53: { initialTime: 5, increment: 3 },
+  rapid100: { initialTime: 10, increment: 0 },
+  rapid105: { initialTime: 10, increment: 5 },
+  rapid1510: { initialTime: 15, increment: 10 },
+  classical300: { initialTime: 30, increment: 0 },
+  classical3020: { initialTime: 30, increment: 20 },
 } as Record<string, TimeControl>;
 const defaultTimeControl: string = "rapid1510";
 
 function makeTimeControlLabel(timeControl: TimeControl): string {
   let gameType;
-  if (timeControl.minutes < 3) gameType = "Bullet";
-  else if (timeControl.minutes < 10) gameType = "Blitz";
-  else if (timeControl.minutes < 30) gameType = "Rapid";
+  if (timeControl.initialTime < 3) gameType = "Bullet";
+  else if (timeControl.initialTime < 10) gameType = "Blitz";
+  else if (timeControl.initialTime < 30) gameType = "Rapid";
   else gameType = "Classical";
 
-  return `${gameType} ${timeControl.minutes} | ${timeControl.seconds}`;
+  return `${gameType} ${timeControl.initialTime} | ${timeControl.increment}`;
 }
 
+// TODO: add a game-over modal that shows the user the game is over and why it ended
 export default function ChessGame() {
   const {
     applyMove,
@@ -89,6 +90,7 @@ export default function ChessGame() {
     isValidMove,
     resetGame,
     startGame,
+    timers,
     togglePaused,
   } = useChessContext();
   const theme = useTheme();
@@ -298,8 +300,8 @@ export default function ChessGame() {
             <ChessGameInfo
               activeSide={gameState.activeSide}
               gameStatus={getGameStatus()}
-              whiteTime={10}
-              blackTime={10}
+              whiteTime={timers.white}
+              blackTime={timers.black}
               paused={false}
             />
           </Paper>

@@ -2,7 +2,6 @@ import { createBoardFromFen, getAllLegalMoves } from "../utils/Board";
 import {
   Color,
   Engine,
-  EngineName,
   GameConfig,
   GameState,
   GameStatus,
