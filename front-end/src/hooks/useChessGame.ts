@@ -75,7 +75,7 @@ export function useChessGame() {
       }
 
       // handle the castles
-      if (moveIsCastle(activeSide, move)) {
+      if (moveIsCastle(board, activeSide, move)) {
         handleCastleMove(newBoard, move, activeSide);
       }
 
@@ -162,14 +162,15 @@ export function useChessGame() {
     return isPawn && isDoublePush;
   }
 
-  function moveIsCastle(activeSide: Color, move: Move): boolean {
+  function moveIsCastle(board: Board, activeSide: Color, move: Move): boolean {
+    const isKing = getPieceAtSquare(board, move.from)?.pieceType === KING;
     const kingSquare = activeSide === WHITE ? "e1" : "e8";
     const validDestination =
       activeSide === WHITE
         ? move.to === "g1" || move.to === "c1"
         : move.to === "g8" || move.to === "c8";
 
-    return kingSquare && validDestination;
+    return isKing && kingSquare && validDestination;
   }
 
   function updateCastleRights(

@@ -619,6 +619,9 @@ function getPseudoLegalMovesForPiece(
     };
 
     const activeSideSquares = squares[activeSide];
+    console.log(castleRights);
+    const canKingSide = castleRights[activeSide].kingSide;
+    const canQueenSide = castleRights[activeSide].queenSide;
 
     const checkSquareCastleEligibility = (
       board: Board,
@@ -632,7 +635,8 @@ function getPseudoLegalMovesForPiece(
     };
 
     // prettier-ignore
-    if (activeSideSquares.kingSide.every(sq => checkSquareCastleEligibility(board, sq as Square, activeSide))) {
+    if (canKingSide && activeSideSquares.kingSide.every(sq => checkSquareCastleEligibility(board, sq as Square, activeSide))) {
+      console.log("kingside castling is ok");
       moves.push({
         from: square,
         to: activeSideSquares.kingSide[1] as Square
@@ -640,10 +644,10 @@ function getPseudoLegalMovesForPiece(
     }
 
     // prettier-ignore
-    if (activeSideSquares.queenSide.every(sq => checkSquareCastleEligibility(board, sq as Square, activeSide))) {
+    if (canQueenSide && activeSideSquares.queenSide.every(sq => checkSquareCastleEligibility(board, sq as Square, activeSide))) {
       moves.push({
         from: square,
-        to: activeSideSquares.queenSide[2] as Square
+        to: activeSideSquares.queenSide[1] as Square
       })
     }
   }
