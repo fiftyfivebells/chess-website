@@ -4,6 +4,7 @@ import { GameConfig, GameState, Move } from "../models/types";
 
 interface ChessGameContextType {
   gameState: GameState;
+  isGameActive: boolean;
   isPaused: boolean;
   applyMove: (move: Move) => boolean;
   isValidMove: (move: Move) => boolean;

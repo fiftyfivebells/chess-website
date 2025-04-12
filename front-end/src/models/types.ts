@@ -96,8 +96,6 @@ export interface GameState {
   isStalemate: boolean;
   isDraw: boolean;
 
-  isGameActive: boolean;
-  isPaused: boolean;
   config: GameConfig;
 }
 

@@ -47,6 +47,7 @@ import { getBoardFenRep, getPieceAtSquare } from "../utils/Board";
 import { CapturedPieces } from "./CapturedPieces";
 import { ChessGameInfo } from "./ChessGameInfo";
 import { useEffect, useState } from "react";
+import { BoardOrientation } from "react-chessboard/dist/chessboard/types";
 
 const engineOptions = {
   go: GO,
@@ -83,6 +84,7 @@ export default function ChessGame() {
   const {
     applyMove,
     gameState,
+    isGameActive,
     isPaused,
     isValidMove,
     resetGame,
@@ -101,10 +103,10 @@ export default function ChessGame() {
 
   // --- Effect to open modal on initial load or when game is reset ---
   useEffect(() => {
-    if (!gameState.isGameActive) {
+    if (!isGameActive) {
       setIsModalOpen(true);
     }
-  }, [gameState]);
+  }, [isGameActive]);
 
   // Handlers for the values set by the modal
   const handleSideChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,10 +189,9 @@ export default function ChessGame() {
     return ACTIVE;
   };
 
-  const capturedPiecesOrder = isSmallScreen ? 4 : 1;
+  const capturedPiecesOrder = isSmallScreen ? 3 : 1;
   const boardOrder = isSmallScreen ? 1 : 2;
-  const buttonsOrder = isSmallScreen ? 2 : 3;
-  const chessGameInfoOrder = isSmallScreen ? 3 : 4;
+  const chessGameInfoOrder = isSmallScreen ? 2 : 3;
 
   return (
     <Box
@@ -237,7 +238,11 @@ export default function ChessGame() {
               <Chessboard
                 position={getBoardFenRep(gameState.board)}
                 onPieceDrop={onDrop}
-                // Add other props as needed: arePiecesDraggable, custom pieces, etc.
+                arePiecesDraggable={!isPaused}
+                boardOrientation={
+                  // only flip the board once the game has actually started
+                  isGameActive ? (selectedSide as BoardOrientation) : "white"
+                }
               />
             </Paper>
             <Stack
@@ -249,7 +254,13 @@ export default function ChessGame() {
               <Button
                 variant="outlined"
                 onClick={handleReset}
-                disabled={!gameState.isGameActive} // Disable if game hasn't started yet
+                disabled={!isGameActive} // Disable if game hasn't started yet
+                sx={{
+                  padding: { xs: "4px 8px", sm: "5px 10px", md: "6px 16px" },
+                  fontSize: { xs: "0.7rem", sm: "0.8rem", md: "0.875rem" }, // Adjust values as needed
+                  whiteSpace: "nowrap",
+                  minWidth: "auto",
+                }}
               >
                 Reset Game
               </Button>
@@ -257,12 +268,18 @@ export default function ChessGame() {
                 variant="contained"
                 onClick={handlePauseButton}
                 disabled={
-                  !gameState.isGameActive ||
+                  !isGameActive ||
                   gameState.isCheckmate ||
                   gameState.isDraw ||
                   gameState.isStalemate
                 } // Disable if not started or game over
                 color={isPaused ? "secondary" : "primary"}
+                sx={{
+                  padding: { xs: "4px 8px", sm: "5px 10px", md: "6px 16px" },
+                  fontSize: { xs: "0.7rem", sm: "0.8rem", md: "0.875rem" }, // Adjust values as needed
+                  whiteSpace: "nowrap",
+                  minWidth: "auto",
+                }}
               >
                 {isPaused ? "Resume" : "Pause"}
               </Button>
@@ -296,7 +313,7 @@ export default function ChessGame() {
           if (
             reason &&
             (reason === "backdropClick" || reason === "escapeKeyDown") &&
-            !gameState.isGameActive
+            !isGameActive
           ) {
             return;
           }
@@ -305,7 +322,7 @@ export default function ChessGame() {
           setIsModalOpen(false);
         }}
         aria-labelledby="game-setup-dialog-title"
-        disableEscapeKeyDown={!gameState.isGameActive} // Prevent Esc key close before first start
+        disableEscapeKeyDown={!isGameActive} // Prevent Esc key close before first start
       >
         <DialogTitle id="game-setup-dialog-title">Game Setup</DialogTitle>
         <DialogContent>

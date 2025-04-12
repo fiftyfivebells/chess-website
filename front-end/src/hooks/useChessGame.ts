@@ -34,6 +34,7 @@ import {
 export function useChessGame() {
   const [gameState, setGameState] = useState<GameState>(INITIAL_GAME_STATE);
   const [isPaused, setIsPaused] = useState<boolean>(false);
+  const [isGameActive, setIsGameActive] = useState<boolean>(false);
   const [legalMoves, setLegalMoves] = useState<Move[]>(INITIAL_STATE_MOVES);
 
   const applyMove = useCallback(
@@ -285,13 +286,14 @@ export function useChessGame() {
   function startGame(config: GameConfig): void {
     const { ...newGameState } = gameState;
 
-    newGameState.isGameActive = true;
     newGameState.config = config;
 
+    setIsGameActive(true);
     setGameState(newGameState);
   }
 
   function resetGame(): void {
+    setIsGameActive(false);
     setGameState(INITIAL_GAME_STATE);
   }
 
@@ -308,5 +310,6 @@ export function useChessGame() {
     resetGame,
     togglePaused,
     isPaused,
+    isGameActive,
   };
 }

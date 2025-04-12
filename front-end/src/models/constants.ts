@@ -59,8 +59,6 @@ export const INITIAL_GAME_STATE = {
   isDraw: false,
 
   config: {} as GameConfig,
-  isPaused: false,
-  isGameActive: false,
 };
 
 export const INITIAL_STATE_MOVES = getAllLegalMoves(
