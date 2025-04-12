@@ -1,7 +1,15 @@
 import { Box, Grid, Paper, useMediaQuery, useTheme } from "@mui/material";
 import { Chessboard } from "react-chessboard";
 import { useChessContext } from "../context/ChessGameContext";
-import { ACTIVE, CHECK, CHECKMATE, DRAW, STALEMATE } from "../models/constants";
+import {
+  ACTIVE,
+  BLACK,
+  CHECK,
+  CHECKMATE,
+  DRAW,
+  STALEMATE,
+  WHITE,
+} from "../models/constants";
 import { GameStatus, PieceType, Square } from "../models/types";
 import { getBoardFenRep, getPieceAtSquare } from "../utils/Board";
 import { CapturedPieces } from "./CapturedPieces";
@@ -70,8 +78,8 @@ export default function ChessGame() {
         <Grid size={{ xs: 12, md: 2 }} order={capturedPiecesOrder}>
           <Paper elevation={1} sx={{ padding: 1 }}>
             <CapturedPieces
-              whiteCaptured={gameState.whiteCaptured}
-              blackCaptured={gameState.blackCaptured}
+              whiteCaptured={gameState.capturedPieces[WHITE]}
+              blackCaptured={gameState.capturedPieces[BLACK]}
             />
           </Paper>
         </Grid>

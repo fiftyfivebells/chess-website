@@ -91,12 +91,12 @@ export function useChessGame() {
       // add captured pieces to the lists
       const newWhiteCaptured =
         capturedPiece && capturedPiece.color === WHITE
-          ? [...gameState.whiteCaptured, capturedPiece]
-          : [...gameState.whiteCaptured];
+          ? [...gameState.capturedPieces[WHITE], capturedPiece]
+          : [...gameState.capturedPieces[WHITE]];
       const newBlackCaptured =
         capturedPiece && capturedPiece.color === BLACK
-          ? [...gameState.blackCaptured, capturedPiece]
-          : [...gameState.blackCaptured];
+          ? [...gameState.capturedPieces[BLACK], capturedPiece]
+          : [...gameState.capturedPieces[BLACK]];
 
       // update the move counts
       const newRule50 =
@@ -129,8 +129,10 @@ export function useChessGame() {
         fullMoveCount: newFullMoveCount,
         rule50: newRule50,
 
-        whiteCaptured: newWhiteCaptured,
-        blackCaptured: newBlackCaptured,
+        capturedPieces: {
+          white: newWhiteCaptured,
+          black: newBlackCaptured,
+        },
         history: [...history, gameState],
         isCheck: isCheck,
         isCheckmate: isCheckMate,

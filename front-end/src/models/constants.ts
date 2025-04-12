@@ -39,8 +39,10 @@ export const INITIAL_GAME_STATE = {
   fullMoveCount: 1,
   rule50: 0,
   history: [] as GameState[],
-  whiteCaptured: [] as Piece[],
-  blackCaptured: [] as Piece[],
+  capturedPieces: {
+    white: [] as Piece[],
+    black: [] as Piece[],
+  },
 
   isCheck: false,
   isCheckmate: false,
