@@ -1,12 +1,16 @@
 import { createContext, ReactNode, useContext } from "react";
 import { useChessGame } from "../hooks/useChessGame";
-import { GameState, Move } from "../models/types";
+import { GameConfig, GameState, Move } from "../models/types";
 
 interface ChessGameContextType {
   gameState: GameState;
+  isPaused: boolean;
   applyMove: (move: Move) => boolean;
   isValidMove: (move: Move) => boolean;
-  getFen: () => void;
+  getFen: () => string;
+  startGame: (config: GameConfig) => void;
+  resetGame: () => void;
+  togglePaused: () => void;
 }
 
 const ChessGameContext = createContext<ChessGameContextType | undefined>(

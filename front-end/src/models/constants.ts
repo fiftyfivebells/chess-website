@@ -1,5 +1,14 @@
 import { createBoardFromFen, getAllLegalMoves } from "../utils/Board";
-import { Color, GameState, GameStatus, Piece, PieceType } from "./types";
+import {
+  Color,
+  Engine,
+  EngineName,
+  GameConfig,
+  GameState,
+  GameStatus,
+  Piece,
+  PieceType,
+} from "./types";
 
 export const WHITE: Color = "white";
 export const BLACK: Color = "black";
@@ -48,6 +57,10 @@ export const INITIAL_GAME_STATE = {
   isCheckmate: false,
   isStalemate: false,
   isDraw: false,
+
+  config: {} as GameConfig,
+  isPaused: false,
+  isGameActive: false,
 };
 
 export const INITIAL_STATE_MOVES = getAllLegalMoves(
@@ -55,3 +68,14 @@ export const INITIAL_STATE_MOVES = getAllLegalMoves(
   WHITE,
   INITIAL_GAME_STATE.castleRights,
 );
+
+// engines
+export const GO: Engine = {
+  name: "go",
+  label: "Not So Deep Blue - Go Edition",
+};
+
+export const STOCKFISH: Engine = {
+  name: "stockfish",
+  label: "Stockfish",
+};

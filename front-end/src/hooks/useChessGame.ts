@@ -14,6 +14,7 @@ import {
   Board,
   CastleRights,
   Color,
+  GameConfig,
   GameState,
   Move,
   Piece,
@@ -32,6 +33,7 @@ import {
 
 export function useChessGame() {
   const [gameState, setGameState] = useState<GameState>(INITIAL_GAME_STATE);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
   const [legalMoves, setLegalMoves] = useState<Move[]>(INITIAL_STATE_MOVES);
 
   const applyMove = useCallback(
@@ -138,6 +140,9 @@ export function useChessGame() {
         isCheckmate: isCheckMate,
         isStalemate: isStaleMate,
         isDraw: isDraw,
+
+        config: gameState.config,
+        isPaused: false,
       };
 
       setGameState(newGameState);
@@ -277,10 +282,31 @@ export function useChessGame() {
     return `${boardFen} ${color} ${castleRights} ${epSquare} ${rule50} ${fullMove}`;
   }, [gameState]);
 
+  function startGame(config: GameConfig): void {
+    const { ...newGameState } = gameState;
+
+    newGameState.isGameActive = true;
+    newGameState.config = config;
+
+    setGameState(newGameState);
+  }
+
+  function resetGame(): void {
+    setGameState(INITIAL_GAME_STATE);
+  }
+
+  function togglePaused(): void {
+    setIsPaused(!isPaused);
+  }
+
   return {
     gameState,
     applyMove,
     isValidMove,
     getFen,
+    startGame,
+    resetGame,
+    togglePaused,
+    isPaused,
   };
 }

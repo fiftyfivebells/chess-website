@@ -60,6 +60,24 @@ export type CastleRights = {
   };
 };
 
+export interface TimeControl {
+  minutes: number;
+  seconds: number;
+}
+
+export type EngineName = "go" | "stockfish";
+
+export interface Engine {
+  name: EngineName;
+  label: string;
+}
+
+export interface GameConfig {
+  engine: EngineName;
+  timeControl: TimeControl;
+  playerColor: Color;
+}
+
 export interface GameState {
   board: Board;
   activeSide: Color;
@@ -67,14 +85,20 @@ export interface GameState {
   castleRights?: CastleRights;
   fullMoveCount: number;
   rule50: number;
-  whiteCaptured: Piece[];
-  blackCaptured: Piece[];
+  capturedPieces: {
+    white: Piece[];
+    black: Piece[];
+  };
 
   history: GameState[];
   isCheck: boolean;
   isCheckmate: boolean;
   isStalemate: boolean;
   isDraw: boolean;
+
+  isGameActive: boolean;
+  isPaused: boolean;
+  config: GameConfig;
 }
 
 export type GameStatus =
