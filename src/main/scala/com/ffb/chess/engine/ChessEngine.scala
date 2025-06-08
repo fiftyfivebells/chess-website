@@ -27,12 +27,12 @@ object ChessEngine {
     s"$EngineDirPrefix$engineName"
 }
 
-final case object GoEngine extends ChessEngine {
+case object GoEngine extends ChessEngine {
   override val engineName: String =
     ChessEngine.makeEngineName("nsdb-go-edition")
 }
 
-final case object Stockfish extends ChessEngine {
+case object Stockfish extends ChessEngine {
   override val engineName: String =
     ChessEngine.makeEngineName("stockfish")
 }

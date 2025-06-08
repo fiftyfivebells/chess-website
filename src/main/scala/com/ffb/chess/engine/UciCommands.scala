@@ -4,15 +4,15 @@ sealed trait UciCommand {
   def command: String
 }
 
-final case object Uci extends UciCommand {
+case object Uci extends UciCommand {
   override val command: String = "uci"
 }
 
-final case object UciNewGame extends UciCommand {
+case object UciNewGame extends UciCommand {
   override val command: String = "ucinewgame"
 }
 
-final case class Position(fen: Option[String], moves: String)
+case class Position(fen: Option[String], moves: String)
     extends UciCommand {
   override val command: String = fen match {
     case Some(f) => s"position fen $f $moves"
@@ -20,7 +20,7 @@ final case class Position(fen: Option[String], moves: String)
   }
 }
 
-final case class Go(args: String*) extends UciCommand {
+case class Go(args: String*) extends UciCommand {
   override val command: String = args match {
     case Nil => "go"
     case lst => s"go ${lst.mkString(" ")}"

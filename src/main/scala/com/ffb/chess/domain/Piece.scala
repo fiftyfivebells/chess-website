@@ -3,7 +3,9 @@ package com.ffb.chess.domain
 import io.circe.{Encoder, Decoder}
 import io.circe.generic.semiauto._
 
-sealed trait Piece {
+enum Piece:
+  case Pawn, Knight, Bishop, Rook, Queen, King
+
   override def toString(): String = this match {
     case Piece.Pawn   => "p"
     case Piece.Knight => "n"
@@ -12,17 +14,10 @@ sealed trait Piece {
     case Piece.Queen  => "q"
     case Piece.King   => "k"
   }
-}
-object Piece {
+
+object Piece:
   implicit val encoder: Encoder[Piece] = deriveEncoder[Piece]
   implicit val decoder: Decoder[Piece] = deriveDecoder[Piece]
-
-  final case object Pawn extends Piece
-  final case object Knight extends Piece
-  final case object Bishop extends Piece
-  final case object Rook extends Piece
-  final case object Queen extends Piece
-  final case object King extends Piece
 
   def fromString(piece: String): Piece = piece match {
     case "p" => Piece.Pawn
@@ -32,4 +27,3 @@ object Piece {
     case "q" => Piece.Queen
     case "k" => Piece.King
   }
-}

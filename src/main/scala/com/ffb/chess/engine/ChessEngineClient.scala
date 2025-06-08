@@ -20,7 +20,7 @@ case class ChessEngineClient(
     // this recursive helper reads the input from stdout up to and including a terminating line.
     // the uci spec has pretty specific prefixes for output, like "uciok", "bestmove", etc.
     // this lets the server read all the output and then stop blocking, so other things can happen
-    @tailrec
+    @annotation.tailrec
     def readLines(lines: List[String]): List[String] = {
       reader.readLine() match {
         case null                                => lines.reverse
