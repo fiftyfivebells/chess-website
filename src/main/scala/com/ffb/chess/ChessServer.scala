@@ -1,17 +1,17 @@
 package com.ffb.chess
 
-import org.http4s.HttpRoutes
-import org.http4s.ember.server.EmberServerBuilder
-import org.http4s.implicits._
 import cats.effect.IO
-
-import _root_.com.comcast.ip4s.{Host, Port}
-import _root_.com.ffb.chess.routes.ChessRoutes
+import com.comcast.ip4s.{Host, Port}
+import org.http4s.ember.server.EmberServerBuilder
+import org.http4s.HttpRoutes
+import org.http4s.implicits._
 import org.http4s.server.Router
+
+import com.ffb.chess.routes.ChessRoutes
 
 object Server {
   def routes: HttpRoutes[IO] = Router(
-    "/api/chess" -> ChessRoutes.routes()
+    "/api/chess/game" -> ChessRoutes.routes()
   )
 
   def runServer(): IO[Unit] = {
