@@ -42,10 +42,4 @@ object ChessRoutes extends Http4sDsl[IO]:
           )
           response <- Ok(bestMove)
         } yield response
-
-      case GET -> Root / "ping" =>
-        val initFen = GameState.initialFEN
-
-        Ok(Map("initialFen" -> initFen).asJson)
-
     }
