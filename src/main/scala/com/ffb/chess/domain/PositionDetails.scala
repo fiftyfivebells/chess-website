@@ -4,8 +4,9 @@ import io.circe.{Decoder, Encoder}
 import io.circe.generic.semiauto.*
 import java.util.UUID
 
-import com.ffb.zugzwang.chess.Color
-import com.ffb.zugzwang.chess.GameState
+import com.ffb.chess.domain.Codecs.given
+import com.ffb.zugzwang.chess.{Color, GameState}
+import com.ffb.zugzwang.move.Move
 import com.ffb.zugzwang.Zugzwang
 
 enum GameStatus:
@@ -48,22 +49,24 @@ given Decoder[Color] = Decoder.decodeString.emap {
 }
 
 case class PositionDetails(
-    gameId: UUID,
-    fen: String,
-    status: GameStatus,
-    activeColor: Color,
-    legalMoves: List[Move],
-    history: List[String]
+  gameId: UUID,
+  fen: String,
+  status: GameStatus,
+  activeColor: Color,
+  legalMoves: List[Move],
+  history: List[String]
 )
 
 object PositionDetails:
+
+  given Encoder[PositionDetails] = deriveEncoder[PositionDetails]
+  given Decoder[PositionDetails] = deriveDecoder[PositionDetails]
+
   def from(state: GameState): PositionDetails =
-    val fen = state.toFen
+    val fen  = state.toFen
     val uuid = UUID.randomUUID()
 
-    val moves = Zugzwang.legalMoves(state).map { m =>
-      Move.fromString(m.toUci)
-    }
+    val moves = Zugzwang.legalMoves(state)
 
     PositionDetails(
       uuid,

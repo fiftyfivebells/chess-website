@@ -1,7 +1,8 @@
 package com.ffb.chess.domain
 
+import io.circe.generic.semiauto.*
 import io.circe.{Encoder, Decoder}
-import io.circe.generic.semiauto._
+
 
 enum Piece:
   case Pawn, Knight, Bishop, Rook, Queen, King
