@@ -7,21 +7,15 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.circe.*
 
 import com.ffb.chess.api.MoveRequest
-import com.ffb.chess.domain.Move
+import com.ffb.chess.domain.Codecs.given
+import com.ffb.chess.domain.PositionDetails
+import com.ffb.chess.repository.ChessGameRepository
 import com.ffb.chess.service.ChessService
 import com.ffb.chess.service.ChessService.bestMove
-import com.ffb.chess.repository.ChessGameRepository
-import com.ffb.zugzwang.chess.{GameState, Square}
-import com.ffb.zugzwang.move.Move as Move2
-import com.ffb.zugzwang.move.MoveType
-import com.ffb.zugzwang.Zugzwang
-import com.ffb.chess.domain.PositionDetails
-import com.ffb.chess.domain.PositionDetails.given
+import com.ffb.zugzwang.move.Move
 
 object ChessRoutes extends Http4sDsl[IO]:
-  implicit val moveEncoder: EntityEncoder[IO, Move] =
-    jsonEncoderOf[IO, Move]
-
+  given EntityEncoder[IO, Move] = jsonEncoderOf[IO, Move]
   given EntityDecoder[IO, Move] = jsonOf[IO, Move]
 
   given EntityDecoder[IO, List[PositionDetails]] =
@@ -37,20 +31,17 @@ object ChessRoutes extends Http4sDsl[IO]:
     HttpRoutes.of[IO] {
       case GET -> Root / "new" =>
         Ok(
-          for {
-            pos <- IO(PositionDetails.from(GameState.initial))
-            _ <- repo.create(pos)
-          } yield pos.asJson
+          for
+            pos <- IO(ChessService.newGame)
+            _   <- repo.create(pos)
+          yield pos.asJson
         )
-      // IO(PositionDetails.from(GameState.initial)) flatMap { pos =>
-      //   if repo.update(pos.gameId, pos) then Ok(pos.asJson)
-      //   else NotFound("Bad idea")
-      // }
 
       case GET -> Root / "all" =>
-        Ok(for {
-          all <- repo.all
-        } yield all.asJson)
+        Ok(
+          for all <- repo.all
+          yield all.asJson
+        )
 
       case GET -> Root / UUIDVar(id) / "state" =>
         repo.get(id) flatMap {
@@ -60,36 +51,36 @@ object ChessRoutes extends Http4sDsl[IO]:
 
       case GET -> Root / UUIDVar(id) / "legalMoves" =>
         repo.get(id) flatMap {
-          case Some(position) => Ok(position.legalMoves.asJson)
-          case None           => NotFound(s"Game with id $id not found")
+          case Some(position) =>
+            ChessService
+              .legalMoves(position)
+              .fold(
+                error => BadRequest(error.toString),
+                success => Ok(success.asJson)
+              )
+
+          case None => NotFound(s"Game with id $id not found")
         }
 
       case req @ POST -> Root / UUIDVar(id) / "applyMove" =>
         repo.get(id) flatMap {
           case Some(position) =>
-            Ok(for {
-              m <- req.as[Move]
-              move = Move2(
-                Square.E2,
-                Square.E4,
-                None,
-                MoveType.DoublePush
-              )
-              moved <- IO.fromEither(Zugzwang.applyMove(position.fen, move))
-              newPosition = PositionDetails.from(moved)
-            } yield newPosition.asJson)
+            (for
+              move        <- req.as[Move]
+              newPosition <- IO.fromEither(ChessService.applyMove(position, move))
+            yield newPosition).flatMap(pos => Ok(pos.asJson))
 
           case None => NotFound(s"Game with id $id not found")
         }
 
       case req @ POST -> Root / id / "bestmove" =>
-        for {
+        for
           moveReq <- req.as[MoveRequest]
           bestMove <- ChessService.bestMove(
-            moveReq.position,
-            moveReq.moves,
-            moveReq.engine
-          )
+                        moveReq.position,
+                        moveReq.moves,
+                        moveReq.engine
+                      )
           response <- Ok(bestMove)
-        } yield response
+        yield response
     }
