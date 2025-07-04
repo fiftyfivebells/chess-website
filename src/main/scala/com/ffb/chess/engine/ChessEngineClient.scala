@@ -1,52 +1,50 @@
 package com.ffb.chess.engine
 
 import cats.effect.{IO, Resource}
-import java.io.{BufferedReader, InputStreamReader}
+import cats.effect.kernel.Async
+import cats.effect.kernel.Async.*
+import cats.effect.std.Queue
+import cats.implicits.*
+import fs2.Stream
+import java.io.{BufferedReader, BufferedWriter, InputStreamReader, OutputStreamWriter}
 
 import com.ffb.zugzwang.move.Move
 
-case class ChessEngineClient(
-  val process: os.SubProcess,
-  val reader: BufferedReader
+class ChessEngineClient[F[_]: Async] private (
+  queue: Queue[F, String],
+  writer: BufferedWriter,
+  process: Process
 ):
-  // TODO: look into fs2 and consider replacing this implementation with one that uses streams
   private def runCommand(
     cmd: UciCommand,
     terminator: String = "uciok"
-  ): IO[String] = IO.blocking {
-    // send the command
-    process.stdin.writeLine(cmd.command)
-    process.stdin.flush()
+  ): F[String] =
+    for
+      _ <- Async[F].blocking {
+             writer.write(cmd.command)
+             writer.newLine()
+             writer.flush()
+           }
+      lines <- Stream
+                 .repeatEval(queue.take)
+                 .takeThrough(_.startsWith(terminator))
+                 .compile
+                 .toList
 
-    // this recursive helper reads the input from stdout up to and including a terminating line.
-    // the uci spec has pretty specific prefixes for output, like "uciok", "bestmove", etc.
-    // this lets the server read all the output and then stop blocking, so other things can happen
-    @annotation.tailrec
-    def readLines(lines: List[String]): List[String] =
-      reader.readLine() match
-        case null                                => lines.reverse
-        case line if line.startsWith(terminator) => (line :: lines).reverse
-        case line                                => readLines(line :: lines)
-
-    val output = readLines(Nil)
-
-    output.mkString("\n").trim
-  }
+      out = lines.mkString("\n")
+    yield out
 
   private def initializeEngine(
     fen: Option[String],
     moves: Option[Seq[Move]]
-  ): IO[Unit] =
+  ): F[Unit] =
     for
       _ <- runCommand(Uci)
       _ <- runCommand(UciNewGame)
-      moveInput = moves match
-                    case None    => ""
-                    case Some(m) => transformMovesInput(m)
-      _ <- runCommand(Position(fen, moveInput))
+      _ <- runCommand(Position(fen, moves.map(transformMovesInput(_))))
     yield ()
 
-  def bestMove(fen: Option[String], moves: Option[Seq[Move]]): IO[String] =
+  def bestMove(fen: Option[String], moves: Option[Seq[Move]]): F[String] =
     for
       _      <- initializeEngine(fen, moves)
       output <- runCommand(Go(), "bestmove")
@@ -67,23 +65,22 @@ case class ChessEngineClient(
     s"moves $moves"
 
 object ChessEngineClient:
-  def create(engine: ChessEngine): Resource[IO, ChessEngineClient] =
+  def create[F[_], Async](engine: ChessEngine): Resource[F, ChessEngineClient[F]] =
     for
       process <- Resource.make(
-                   IO.blocking {
-                     os.proc(engine.engineName).spawn()
-                   }
-                 )(p =>
-                   IO {
-                     p.stdin.close()
-                     p.stdout.close()
-                     p.stderr.close()
-                     p.destroy()
-                   }
-                 )
-      reader <- Resource.eval(
-                  IO.blocking {
-                    new BufferedReader(new InputStreamReader(process.stdout))
-                  }
-                )
-    yield ChessEngineClient(process, reader)
+                   Async[F].delay(new fs2.io.process.ProcessBuilder(engine.engineName).start())
+                 )(p => Async[F].blocking(p.destroy()))
+      reader = new BufferedReader(new InputStreamReader(process.getInputStream))
+      writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream))
+
+      queue <- Resource.eval(Queue.unbounded[F, String])
+      fiber <- Resource.make {
+                 Stream
+                   .repeatEval(Async[F].blocking(reader.readLine()))
+                   .takeWhile(_ != null)
+                   .evalMap(line => queue.offer(line))
+                   .compile
+                   .drain
+                   .start
+               }(_.cancel)
+    yield ChessEngineClient(queue, process, reader)
