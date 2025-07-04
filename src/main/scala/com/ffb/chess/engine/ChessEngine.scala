@@ -13,7 +13,7 @@ object ChessEngine {
   def fromString(engineName: String): ChessEngine = engineName match {
     // this will eventually choose the engine based on the given engine name or
     // default to some engine if the names don't match, but there's only one engine
-    // right now, so default to Go.
+    // right now, so default to Stockfish.
     case "go" => GoEngine
     case _    => defaultEngine
   }
